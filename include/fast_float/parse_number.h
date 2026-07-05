@@ -334,7 +334,7 @@ parse_number_slow_path(UC const *first, UC const *last, T &value,
                        bool bjf
 #endif
                        ) noexcept {
-  parsed_number_string_t<UC> pns =
+  parsed_number_string_t<UC> const pns =
 #ifndef FASTFLOAT_ONLY_POSITIVE_C_NUMBER_WO_INF_NAN
       bjf ? parse_number_string<true, UC>(first, last, options, true) :
 #endif
@@ -378,7 +378,7 @@ from_chars_float_advanced(UC const *first, UC const *last, T &value,
   // only by the rare slow paths). Skipping their stores keeps the fat
   // parsed_number_string_t off the hot path. store_spans is a runtime argument,
   // so this reuses the single parse_number_string instantiation.
-  parsed_number_string_t<UC> pns =
+  parsed_number_string_t<UC> const pns =
 #ifndef FASTFLOAT_ONLY_POSITIVE_C_NUMBER_WO_INF_NAN
       bjf ? parse_number_string<true, UC>(first, last, options, false) :
 #endif
