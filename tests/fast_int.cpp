@@ -17,7 +17,10 @@
 #include <iostream>
 #include <vector>
 #include <string_view>
+#include <string>
 #include <cstring>
+#include <random>
+#include <algorithm>
 #include "fast_float/fast_float.h"
 #include <cstdint>
 
@@ -821,6 +824,61 @@ int main() {
     ++base_unsigned;
   }
 
+  // unsigned out of range error base test, multi-wrap (64 bit)
+  // These values overflow uint64_t, but the accumulator wraps a whole multiple
+  // of 2^64 and lands back at or above the smallest max_digits-length value, so
+  // a single comparison against that bound does not catch the overflow. Bases
+  // 2, 4 and 16 are excluded because their max_digits-length range fits within
+  // a single 2^64 span.
+  std::vector<int> const unsigned_multiwrap_base{
+      3,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 17, 18, 19, 20,
+      21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36};
+  std::vector<std::string_view> const unsigned_multiwrap_base_test{
+      "22222222222222222222222222222222222222222",
+      "4400000000000000000000000000",
+      "5555555555555555555555555",
+      "66666666666666666666666",
+      "7777777777777777777777",
+      "888888888888888888888",
+      "46893488147419103233",
+      "AAAAAAAAAAAAAAAAAAA",
+      "BBBBBBBBBBBBBBBBBB",
+      "427772311192C9BAAB",
+      "DDDDDDDDDDDDDDDDD",
+      "532C82996D3A44919",
+      "GGGGGGGGGGGGGGGG",
+      "HHHHHHHHHHHHHHHH",
+      "3835GEGDF36622EG",
+      "JJJJJJJJJJJJJJJ",
+      "KKKKKKKKKKKKKKK",
+      "LLLLLLLLLLLLLLL",
+      "444BGHB4EG5DA2D",
+      "NNNNNNNNNNNNNN",
+      "JE5H4MNDLJGNLO",
+      "PPPPPPPPPPPPPP",
+      "QQQQQQQQQQQQQQ",
+      "RRRRRRRRRRRRRR",
+      "4H7QS52310IHQK",
+      "TTTTTTTTTTTTTT",
+      "UUUUUUUUUUUUU",
+      "VVVVVVVVVVVVV",
+      "WWWWWWWWWWWWW",
+      "XXXXXXXXXXXXX",
+      "YYYYYYYYYYYYY",
+      "6U831JL976P6O"};
+
+  for (std::size_t i = 0; i < unsigned_multiwrap_base_test.size(); ++i) {
+    auto const &f = unsigned_multiwrap_base_test[i];
+    uint64_t result;
+    auto answer = fast_float::from_chars(f.data(), f.data() + f.size(), result,
+                                         unsigned_multiwrap_base[i]);
+    if (answer.ec != std::errc::result_out_of_range) {
+      std::cerr << "expected error for should be 'result_out_of_range': \"" << f
+                << "\"" << std::endl;
+      return EXIT_FAILURE;
+    }
+  }
+
   // just within range base test (64 bit)
   std::vector<std::string_view> const int_within_range_base_test{
       "111111111111111111111111111111111111111111111111111111111111111",
@@ -1293,6 +1351,330 @@ int main() {
 
     if (failed) {
       return EXIT_FAILURE;
+    }
+  }
+  // The uint8_t and uint16_t base-10 paths use a byte-oriented fast path. A
+  // wider code unit whose low byte is an ASCII digit (e.g. U+2131..U+2139) must
+  // not be mistaken for that digit. The generic path already rejects these for
+  // int; the fixed-width fast paths must agree. Lengths of 1..5 exercise both
+  // the uint8_t path and the 4-digit uint16_t SWAR path.
+  {
+    const std::u16string bad16[] = {
+        u"ℹ", u"ℱℲ", u"ℱℲℳ", u"ℱℲℳℴ", u"ℱℲℳℴℵ",
+    };
+    const std::u32string bad32[] = {
+        U"ℹ",
+        U"ℱℲℳ",
+        U"ℱℲℳℴ",
+        U"ℱℲℳℴℵ",
+    };
+    bool failed = false;
+    for (auto const &s : bad16) {
+      uint8_t r8 = 123;
+      auto a8 = fast_float::from_chars(s.data(), s.data() + s.size(), r8);
+      if (a8.ec == std::errc()) {
+        failed = true;
+        std::cerr << "Incorrectly parsed wide units as uint8_t " << unsigned(r8)
+                  << "." << std::endl;
+      }
+      uint16_t r16 = 123;
+      auto a16 = fast_float::from_chars(s.data(), s.data() + s.size(), r16);
+      if (a16.ec == std::errc()) {
+        failed = true;
+        std::cerr << "Incorrectly parsed wide units as uint16_t " << r16 << "."
+                  << std::endl;
+      }
+    }
+    for (auto const &s : bad32) {
+      uint8_t r8 = 123;
+      auto a8 = fast_float::from_chars(s.data(), s.data() + s.size(), r8);
+      if (a8.ec == std::errc()) {
+        failed = true;
+        std::cerr << "Incorrectly parsed wide units as uint8_t " << unsigned(r8)
+                  << "." << std::endl;
+      }
+      uint16_t r16 = 123;
+      auto a16 = fast_float::from_chars(s.data(), s.data() + s.size(), r16);
+      if (a16.ec == std::errc()) {
+        failed = true;
+        std::cerr << "Incorrectly parsed wide units as uint16_t " << r16 << "."
+                  << std::endl;
+      }
+    }
+
+    if (failed) {
+      return EXIT_FAILURE;
+    }
+  }
+
+  // Comprehensive, oracle-checked u64 overflow detection across every base.
+  //
+  // The accumulator in parse_int_string is allowed to overflow and the result
+  // is validated afterwards. At the max_digits boundary a value can wrap one or
+  // more whole multiples of 2^64 (a 20-digit base-10 number reaches ~5.4*2^64),
+  // so the boundary check must be exact. This section validates from_chars for
+  // bases 2..36 against an independent, trusted oracle: a plain 64-bit checked
+  // multiply-add. It hammers the single leading-digit band that straddles 2^64
+  // (where wrapped and non-wrapped values are hardest to tell apart) and also
+  // covers max_digits-1 (always in range) and max_digits+1 (always overflow).
+  {
+    auto digit_to_char = [](int d) -> char {
+      return d < 10 ? char('0' + d) : char('A' + (d - 10));
+    };
+    auto char_to_digit = [](char c) -> int {
+      if (c >= '0' && c <= '9') {
+        return c - '0';
+      }
+      if (c >= 'A' && c <= 'Z') {
+        return c - 'A' + 10;
+      }
+      return c - 'a' + 10;
+    };
+    // Trusted oracle: parse `s` in `base` with a checked 64-bit multiply-add.
+    // Returns true on u64 overflow; otherwise writes the value to `out`.
+    auto oracle = [&](std::string const &s, int base, uint64_t &out) -> bool {
+      uint64_t v = 0;
+      for (char c : s) {
+        uint64_t const d = uint64_t(char_to_digit(c));
+        if (v > (UINT64_MAX - d) / uint64_t(base)) {
+          return true;
+        }
+        v = uint64_t(base) * v + d;
+      }
+      out = v;
+      return false;
+    };
+    auto to_base = [&](uint64_t v, int base) -> std::string {
+      if (v == 0) {
+        return "0";
+      }
+      std::string s;
+      while (v != 0) {
+        s += digit_to_char(int(v % uint64_t(base)));
+        v /= uint64_t(base);
+      }
+      std::reverse(s.begin(), s.end());
+      return s;
+    };
+    // Add one (in base `base`) to the digit string `s`, carrying as needed.
+    auto increment = [&](std::string s, int base) -> std::string {
+      int carry = 1;
+      for (std::size_t k = s.size(); k-- > 0 && carry != 0;) {
+        int const d = char_to_digit(s[k]) + carry;
+        carry = d / base;
+        s[k] = digit_to_char(d % base);
+      }
+      if (carry != 0) {
+        s.insert(s.begin(), digit_to_char(carry));
+      }
+      return s;
+    };
+
+    // Subtract one (in base `base`) from a non-zero, non-negative string.
+    auto decrement = [&](std::string s, int base) -> std::string {
+      int borrow = 1;
+      for (std::size_t k = s.size(); k-- > 0 && borrow != 0;) {
+        int d = char_to_digit(s[k]) - borrow;
+        borrow = d < 0 ? 1 : 0;
+        if (d < 0) {
+          d += base;
+        }
+        s[k] = digit_to_char(d);
+      }
+      std::size_t lead = s.find_first_not_of('0'); // drop any leading zero
+      return lead == std::string::npos ? "0" : s.substr(lead);
+    };
+
+    std::mt19937_64 rng(0xC0FFEEULL);
+    long long checked = 0;
+    auto verify = [&](std::string const &s, int base) -> bool {
+      uint64_t expected = 0;
+      bool const ov = oracle(s, base, expected);
+      uint64_t result = 0xDEADBEEFULL;
+      auto answer =
+          fast_float::from_chars(s.data(), s.data() + s.size(), result, base);
+      ++checked;
+      if (ov) {
+        if (answer.ec != std::errc::result_out_of_range) {
+          std::cerr << "base " << base
+                    << ": expected result_out_of_range for \"" << s << "\""
+                    << std::endl;
+          return false;
+        }
+      } else {
+        if (answer.ec != std::errc()) {
+          std::cerr << "base " << base << ": unexpected error for \"" << s
+                    << "\"" << std::endl;
+          return false;
+        }
+        if (result != expected) {
+          std::cerr << "base " << base << ": \"" << s << "\" -> " << result
+                    << ", expected " << expected << std::endl;
+          return false;
+        }
+        if (answer.ptr != s.data() + s.size()) {
+          std::cerr << "base " << base << ": did not consume all of \"" << s
+                    << "\"" << std::endl;
+          return false;
+        }
+      }
+      return true;
+    };
+    // Leading zeros are stripped before the digit count, so the outcome must be
+    // unchanged. Checked only on hand-picked values (it exercises shared code).
+    auto verify_zeros = [&](std::string const &digits, int base) -> bool {
+      return verify(digits, base) && verify("0" + digits, base) &&
+             verify(std::string(40, '0') + digits, base);
+    };
+    auto random_tail = [&](std::string &s, int n, int base) {
+      for (int k = 0; k < n; ++k) {
+        // bias toward the extremes (0 and base-1) to hit boundaries often
+        std::uint64_t const r = rng();
+        int const mode = int(r % 4);
+        int const dig = mode == 0   ? 0
+                        : mode == 1 ? base - 1
+                                    : int((r >> 2) % std::uint64_t(base));
+        s += digit_to_char(dig);
+      }
+    };
+
+    for (int base = 2; base <= 36; ++base) {
+      // M = max number of base-`base` digits a u64 can hold.
+      std::string const maxstr = to_base(UINT64_MAX, base);
+      int const M = int(maxstr.size());
+      // b^(M-1): smallest M-digit value, and width of each leading-digit band.
+      uint64_t bM1 = 1;
+      for (int k = 0; k < M - 1; ++k) {
+        bM1 *= uint64_t(base);
+      }
+      int const dmax = int(UINT64_MAX / bM1); // largest leading digit that fits
+
+      // Exact-boundary sweep straddling 2^64 (the hardest transition): the
+      // 64 values UINT64_MAX-31 .. UINT64_MAX (in range) and 2^64 .. 2^64+31
+      // (overflow), built by walking the digit string up and down.
+      std::string below = maxstr, above = increment(maxstr, base);
+      for (int k = 0; k < 32; ++k) {
+        if (!verify(below, base) || !verify(above, base)) {
+          return EXIT_FAILURE;
+        }
+        below = decrement(below, base);
+        above = increment(above, base);
+      }
+      // Hand-picked values, also checked with leading zeros.
+      std::string const allmax(std::size_t(M), digit_to_char(base - 1));
+      if (!verify_zeros(maxstr, base) || // largest in-range value
+          !verify_zeros(increment(maxstr, base), base) || // smallest overflow
+          !verify_zeros(allmax, base)) { // largest M-digit (multi-wrap)
+        return EXIT_FAILURE;
+      }
+
+      // Randomized M-digit values across every leading digit. Bands with
+      // lead > dmax always overflow (this is where the naive min_safe check
+      // wrongly accepted multi-wrap values); lead < dmax always fits; lead ==
+      // dmax straddles 2^64 and gets the heaviest sampling.
+      for (int lead = 1; lead < base; ++lead) {
+        int const trials = lead == dmax ? 4000 : 300;
+        for (int trial = 0; trial < trials; ++trial) {
+          std::string s(1, digit_to_char(lead));
+          random_tail(s, M - 1, base);
+          if (!verify(s, base)) {
+            return EXIT_FAILURE;
+          }
+        }
+      }
+      // max_digits-1 digits never overflow; max_digits+1 digits always do.
+      for (int trial = 0; trial < 500; ++trial) {
+        std::string shorts(1,
+                           digit_to_char(1 + int(rng() % uint64_t(base - 1))));
+        random_tail(shorts, M - 2, base);
+        std::string longs(1,
+                          digit_to_char(1 + int(rng() % uint64_t(base - 1))));
+        random_tail(longs, M, base);
+        if (!verify(shorts, base) || !verify(longs, base)) {
+          return EXIT_FAILURE;
+        }
+      }
+    }
+    if (checked < 100000) {
+      std::cerr << "overflow sweep ran too few cases: " << checked << std::endl;
+      return EXIT_FAILURE;
+    }
+  }
+
+  // Signed (int64_t) boundary: every value that overflows u64 also overflows
+  // i64, and the exact i64 limits must parse. Reuses the oracle indirectly via
+  // hand-built extremes per base.
+  {
+    auto digit_to_char = [](int d) -> char {
+      return d < 10 ? char('0' + d) : char('A' + (d - 10));
+    };
+    auto to_base_signed = [&](int64_t value, int base) -> std::string {
+      // value may be INT64_MIN; accumulate magnitude in u64 to avoid UB.
+      bool const neg = value < 0;
+      uint64_t mag = neg ? (~uint64_t(value) + 1) : uint64_t(value);
+      std::string s;
+      if (mag == 0) {
+        s += '0';
+      }
+      while (mag != 0) {
+        s += digit_to_char(int(mag % uint64_t(base)));
+        mag /= uint64_t(base);
+      }
+      if (neg) {
+        s += '-';
+      }
+      std::reverse(s.begin(), s.end());
+      return s;
+    };
+    for (int base = 2; base <= 36; ++base) {
+      struct {
+        int64_t v;
+      } const limits[] = {{INT64_MAX}, {INT64_MIN}, {0}, {-1}, {1}};
+
+      for (auto const &lim : limits) {
+        std::string const s = to_base_signed(lim.v, base);
+        int64_t result = 123;
+        auto answer =
+            fast_float::from_chars(s.data(), s.data() + s.size(), result, base);
+        if (answer.ec != std::errc() || result != lim.v) {
+          std::cerr << "base " << base << ": signed limit \"" << s
+                    << "\" failed to round-trip (got " << result << ")"
+                    << std::endl;
+          return EXIT_FAILURE;
+        }
+      }
+      // Increment a non-negative magnitude string (in `base`) by one.
+      auto inc_mag = [&](std::string m) -> std::string {
+        int carry = 1;
+        for (std::size_t k = m.size(); k-- > 0 && carry != 0;) {
+          int d = (m[k] >= '0' && m[k] <= '9')   ? m[k] - '0'
+                  : (m[k] >= 'A' && m[k] <= 'Z') ? m[k] - 'A' + 10
+                                                 : m[k] - 'a' + 10;
+          d += carry;
+          carry = d / base;
+          m[k] = digit_to_char(d % base);
+        }
+        if (carry != 0) {
+          m.insert(m.begin(), digit_to_char(carry));
+        }
+        return m;
+      };
+      // INT64_MAX + 1 (= 2^63) overflows a positive int64_t.
+      // INT64_MIN - 1 (= -(2^63 + 1)) overflows a negative int64_t.
+      // Note that -(2^63) == INT64_MIN is in range and is covered above.
+      std::string const max_mag = to_base_signed(INT64_MAX, base); // 2^63 - 1
+      std::string const over = inc_mag(max_mag);                   // 2^63
+      std::string const under = "-" + inc_mag(over); // -(2^63 + 1)
+      for (std::string const &s : {over, under}) {
+        int64_t result = 123;
+        auto answer =
+            fast_float::from_chars(s.data(), s.data() + s.size(), result, base);
+        if (answer.ec != std::errc::result_out_of_range) {
+          std::cerr << "base " << base << ": expected result_out_of_range for "
+                    << "signed \"" << s << "\"" << std::endl;
+          return EXIT_FAILURE;
+        }
+      }
     }
   }
 

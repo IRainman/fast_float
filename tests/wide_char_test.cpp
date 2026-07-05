@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 #include <system_error>
+#include <type_traits>
 
 bool tester(std::string s, double expected,
             fast_float::chars_format fmt = fast_float::chars_format::general) {
@@ -46,8 +47,32 @@ bool test_nan() {
   return tester("nan", std::numeric_limits<double>::quiet_NaN());
 }
 
+// A wide code unit whose low byte is an ASCII space (0x20) but whose full value
+// is not whitespace must not be skipped by skip_white_space. When wchar_t is
+// signed such a unit can be negative, which used to slip past the range guard
+// in is_space and get treated as a space.
+bool test_non_space_with_space_low_byte() {
+  if (!std::is_signed<wchar_t>::value) {
+    return true; // only reproducible where wchar_t is signed
+  }
+  std::wstring input = L" 42";
+  // 0x...FF20: low byte 0x20, high bits set, so the value is negative.
+  input[0] = static_cast<wchar_t>(~static_cast<unsigned int>(0xFF) | 0x20u);
+  double result;
+  auto answer =
+      fast_float::from_chars(input.data(), input.data() + input.size(), result,
+                             fast_float::chars_format::general |
+                                 fast_float::chars_format::skip_white_space);
+  if (answer.ec == std::errc()) {
+    std::cerr << "leading non-space code unit must not be skipped\n";
+    return false;
+  }
+  return true;
+}
+
 int main() {
-  if (test_minus() && test_plus() && test_space() && test_nan()) {
+  if (test_minus() && test_plus() && test_space() && test_nan() &&
+      test_non_space_with_space_low_byte()) {
     std::cout << "all ok" << std::endl;
     return EXIT_SUCCESS;
   }

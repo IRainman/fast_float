@@ -18,7 +18,7 @@
 
 #define FASTFLOAT_VERSION_MAJOR 8
 #define FASTFLOAT_VERSION_MINOR 2
-#define FASTFLOAT_VERSION_PATCH 5
+#define FASTFLOAT_VERSION_PATCH 10
 
 #define FASTFLOAT_STRINGIZE_IMPL(x) #x
 #define FASTFLOAT_STRINGIZE(x) FASTFLOAT_STRINGIZE_IMPL(x)
@@ -225,6 +225,32 @@ using parse_options = parse_options_t<char>;
 #define fastfloat_really_inline __forceinline
 #else
 #define fastfloat_really_inline inline __attribute__((always_inline))
+#endif
+
+// Branch-probability hint marking the rare slow-path branches as cold, so the
+// optimizer keeps the out-of-line slow-path re-parse off the hot path (and does
+// not duplicate the force-inlined hot scanner into the caller, which bloated
+// the hot frame and hurt ILP on some targets). Used at the call site as
+//   if fastfloat_unlikely(cond) { ... }
+// (the macro supplies the parentheses). It expands to the standard [[unlikely]]
+// attribute when supported, otherwise to __builtin_expect on GCC/Clang, or
+// to a no-op elsewhere (e.g. pre-C++20 MSVC, which has no equivalent hint).
+#ifdef __has_cpp_attribute
+#if __has_cpp_attribute(unlikely) >= 201803L
+// g++-9 hits hits this branch, but then fails to compile
+// [[unlikely]]. This happens only with g++-9.
+#if !defined(__GNUC__) || (__GNUC__ != 9)
+#define FASTFLOAT_USE_UNLIKELY_ATTR
+#endif
+#endif
+#endif
+
+#ifdef FASTFLOAT_USE_UNLIKELY_ATTR
+#define fastfloat_unlikely(x) (x) [[unlikely]]
+#elif defined(__GNUC__) || defined(__clang__)
+#define fastfloat_unlikely(x) (__builtin_expect(!!(x), 0))
+#else
+#define fastfloat_unlikely(x) (x)
 #endif
 
 #ifndef FASTFLOAT_ASSERT
@@ -1305,7 +1331,11 @@ template <typename T> constexpr uint8_t space_lut<T>::value[];
 #endif
 
 template <typename UC> constexpr bool is_space(UC c) {
-  return c < 256 && space_lut<>::value[uint8_t(c)];
+  // wchar_t and char can be signed, so a negative code unit slips past a plain
+  // `c < 256` and then indexes the table by its truncated low byte. Compare as
+  // unsigned, matching the care taken in ch_to_digit.
+  using UnsignedUC = typename std::make_unsigned<UC>::type;
+  return static_cast<UnsignedUC>(c) < 256 && space_lut<>::value[uint8_t(c)];
 }
 
 #endif
