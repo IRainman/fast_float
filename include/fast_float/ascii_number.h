@@ -403,9 +403,9 @@ parse_number_string(UC const *p, UC const *pend,
     }
   }
   UC const *const end_of_integer_part = p;
-  int64_t digit_count = int64_t(end_of_integer_part - start_digits);
+  auto digit_count = static_cast<am_digits>(end_of_integer_part - start_digits);
   if (store_spans) {
-    answer.integer = span<UC const>(start_digits, size_t(digit_count));
+    answer.integer = span<UC const>(start_digits, digit_count);
   }
 #ifndef FASTFLOAT_ONLY_POSITIVE_C_NUMBER_WO_INF_NAN
   FASTFLOAT_IF_CONSTEXPR17(basic_json_fmt) {
