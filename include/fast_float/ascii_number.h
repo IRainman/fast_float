@@ -251,9 +251,9 @@ loop_parse_if_eight_digits(char const *&p, char const *const pend,
   // identical either way. Gated to clang: on gcc the extra 4-digit check
   // regresses inputs whose remainder is shorter than 4 digits (it becomes pure
   // overhead there); clang does not show that.
-#if defined(__clang__)
+#if 1 // defined(__clang__)
   if ((pend - p) >= 4) {
-    uint32_t const val4 = read4_to_u32(p);
+    auto const val4 = read_chars_to_unsigned<uint32_t>(p);
     if (is_made_of_four_digits_fast(val4)) {
       i = i * 10000 +
           parse_four_digits_unrolled(val4); // may overflow, that's ok
