@@ -26,7 +26,6 @@ from_chars_result_t<UC>
                                        T &value,
                                        const chars_format fmt) noexcept {
   from_chars_result_t<UC> answer{};
-  answer.ptr = first;
   answer.ec = std::errc(); // be optimistic
 
   FASTFLOAT_ASSUME(first < last); // so dereference without checks

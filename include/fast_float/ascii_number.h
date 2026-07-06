@@ -126,7 +126,7 @@ parse_eight_digits_unrolled(uint64_t val) noexcept {
   val -= 0x3030303030303030;
   val = (val * 10) + (val >> 8); // val = (val * 2561) >> 8;
   val = (((val & mask) * mul1) + (((val >> 16) & mask) * mul2)) >> 32;
-  return uint32_t(val);
+  return static_cast<uint32_t>(val);
 }
 
 // Call this if chars are definitely 8 digits.
@@ -525,7 +525,7 @@ parse_number_string(UC const *p, UC const *pend,
     }
   }
 
-  // We parsed all parts of the number, let's save progress.
+  // We sucessfully parsed all parts of the number, let's save progress.
   answer.lastmatch = p;
 
   // Now we can check for errors.
@@ -535,7 +535,7 @@ parse_number_string(UC const *p, UC const *pend,
   // of a 64-bit integer. However, this is uncommon.
   //
   // We can deal with up to 19 digits.
-  if (digit_count > 19) { // this is uncommon
+  if fastfloat_unlikely (digit_count > 19) { // this is uncommon
     // It is possible that the integer had an overflow.
     // We have to handle the case where we have 0.0000somenumber.
     // We need to be mindful of the case where we only have zeroes...
@@ -550,7 +550,7 @@ parse_number_string(UC const *p, UC const *pend,
     }
 
     // We have to check if number has more than 19 significant digits.
-    if (digit_count > 19) {
+    if fastfloat_unlikely (digit_count > 19) {
       answer.too_many_digits = true;
       // The truncation recompute below reads the integer/fraction spans. When
       // store_spans is false we didn't materialize them, so just flag
@@ -641,10 +641,10 @@ parse_int_string(UC const *p, UC const *pend, T &value,
         value = 0;
         answer.ec = std::errc();
         answer.ptr = p;
-      } else {
-        answer.ec = std::errc::invalid_argument;
-        answer.ptr = first;
+        return answer;
       }
+      answer.ec = std::errc::invalid_argument;
+      answer.ptr = first;
       return answer;
     }
 
