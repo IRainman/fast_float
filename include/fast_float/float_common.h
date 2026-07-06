@@ -255,12 +255,16 @@ using parse_options = parse_options_t<char>;
 
 #ifndef FASTFLOAT_ASSERT
 #define FASTFLOAT_ASSERT(x)                                                    \
-  { ((void)(x)); }
+  {                                                                            \
+    ((void)(x));                                                               \
+  }
 #endif
 
 #ifndef FASTFLOAT_DEBUG_ASSERT
 #define FASTFLOAT_DEBUG_ASSERT(x)                                              \
-  { ((void)(x)); }
+  {                                                                            \
+    ((void)(x));                                                               \
+  }
 #endif
 
 // rust style `try!()` macro, or `?` operator
@@ -440,6 +444,8 @@ fastfloat_strncasecmp5(UC const *actual_mixedcase,
       return (actual_mixedcase[4] | 32) == (expected_lowercase[4]);
     }
   }
+  // crutch for older GCC and MinGW probably.
+  return false;
 }
 
 // Compares two ASCII strings in a case insensitive manner.
