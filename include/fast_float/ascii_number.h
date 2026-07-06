@@ -227,9 +227,7 @@ bool simd_parse_if_eight_digits_unrolled(UC const *, uint64_t &) {
 template <typename UC, FASTFLOAT_ENABLE_IF(!std::is_same<UC, char>::value) = 0>
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 void
 loop_parse_if_eight_digits(UC const *&p, UC const *const pend, uint64_t &i) {
-  if (!has_simd_opt<UC>()) {
-    return;
-  }
+  FASTFLOAT_IF_CONSTEXPR17(!has_simd_opt<UC>()) { return; }
   while ((std::distance(p, pend) >= 8) &&
          simd_parse_if_eight_digits_unrolled(
              p, i)) { // in rare cases, this will overflow, but that's ok
@@ -636,22 +634,22 @@ parse_int_string(UC const *p, UC const *pend, T &value,
 
   auto const *const start_digits = p;
 
-  FASTFLOAT_IF_CONSTEXPR17((std::is_same<T, std::uint8_t>::value) &&
-                           sizeof(UC) == 1) {
-    if (options.base == 10) {
-      auto const len = static_cast<am_digits>(pend - p);
-      if (len == 0) {
-        if (has_leading_zeros) {
-          value = 0;
-          answer.ec = std::errc();
-          answer.ptr = p;
-        } else {
-          answer.ec = std::errc::invalid_argument;
-          answer.ptr = first;
-        }
-        return answer;
+  if (options.base == 10) {
+    auto const len = static_cast<am_digits>(pend - p);
+    if (len == 0) {
+      if (has_leading_zeros) {
+        value = 0;
+        answer.ec = std::errc();
+        answer.ptr = p;
+      } else {
+        answer.ec = std::errc::invalid_argument;
+        answer.ptr = first;
       }
+      return answer;
+    }
 
+    FASTFLOAT_IF_CONSTEXPR17((std::is_same<T, std::uint8_t>::value) &&
+                             sizeof(UC) == 1) {
       uint32_t digits;
 
       if (len >= sizeof(uint32_t)) {
@@ -710,24 +708,9 @@ parse_int_string(UC const *p, UC const *pend, T &value,
       answer.ptr = p + nd;
       return answer;
     }
-  }
 
-  FASTFLOAT_IF_CONSTEXPR17((std::is_same<T, std::uint16_t>::value) &&
-                           sizeof(UC) == 1) {
-    if (options.base == 10) {
-      const auto len = static_cast<am_digits>(pend - p);
-      if (len == 0) {
-        if (has_leading_zeros) {
-          value = 0;
-          answer.ec = std::errc();
-          answer.ptr = p;
-          return answer;
-        }
-        answer.ec = std::errc::invalid_argument;
-        answer.ptr = first;
-        return answer;
-      }
-
+    FASTFLOAT_IF_CONSTEXPR17((std::is_same<T, std::uint16_t>::value) &&
+                             sizeof(UC) == 1) {
       if (len >= sizeof(uint32_t)) {
         auto const digits = read_chars_to_unsigned<uint32_t>(p);
         if (is_made_of_four_digits_fast(digits)) {
