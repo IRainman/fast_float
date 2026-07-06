@@ -25,8 +25,8 @@ from_chars_result_t<UC>
     FASTFLOAT_CONSTEXPR14 parse_infnan(UC const *first, UC const *last,
                                        T &value,
                                        const chars_format fmt) noexcept {
-  from_chars_result_t<UC> answer{};
-  answer.ec = std::errc(); // be optimistic
+  from_chars_result_t<UC> answer;
+  answer.ptr = first;
 
   FASTFLOAT_ASSUME(first < last); // so dereference without checks
 
@@ -55,6 +55,7 @@ from_chars_result_t<UC>
             break; // forbidden char, not nan(n-char-seq-opt)
         }
       }
+      answer.ec = std::errc();
       return answer;
     }
     if (fastfloat_strncasecmp3(first, str_const_inf<UC>())) {
@@ -66,6 +67,7 @@ from_chars_result_t<UC>
       }
       value = minusSign ? -std::numeric_limits<T>::infinity()
                         : std::numeric_limits<T>::infinity();
+      answer.ec = std::errc();
       return answer;
     }
   }
