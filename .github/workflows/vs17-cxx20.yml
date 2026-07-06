@@ -16,7 +16,7 @@ jobs:
           - {gen: Visual Studio 18 2026, arch: x64, cfg: Debug}
     steps:
       - name: checkout
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v7
       - name: configure
         run: >-
           cmake -S . -B build -G "${{matrix.gen}}" -A ${{matrix.arch}}
