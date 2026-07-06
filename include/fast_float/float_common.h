@@ -413,7 +413,7 @@ fastfloat_strncasecmp5(UC const *actual_mixedcase,
       val2 |= mask;
       return val1 == val2;
     }
-    else FASTFLOAT_IF_CONSTEXPR17(sizeof(UC) == 2) {
+    FASTFLOAT_IF_CONSTEXPR17(sizeof(UC) == 2) {
       constexpr uint64_t mask = 0x0020002000200020;
       std::memcpy(&val1, actual_mixedcase, 4 * sizeof(UC));
       std::memcpy(&val2, expected_lowercase, 4 * sizeof(UC));
@@ -423,7 +423,7 @@ fastfloat_strncasecmp5(UC const *actual_mixedcase,
       }
       return (actual_mixedcase[4] | 32) == (expected_lowercase[4]);
     }
-    else FASTFLOAT_IF_CONSTEXPR17(sizeof(UC) == 4) {
+    FASTFLOAT_IF_CONSTEXPR17(sizeof(UC) == 4) {
       constexpr uint64_t mask = 0x0000002000000020;
       std::memcpy(&val1, actual_mixedcase, 2 * sizeof(UC));
       std::memcpy(&val2, expected_lowercase, 2 * sizeof(UC));
