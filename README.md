@@ -8,6 +8,9 @@
 [![vs17](https://github.com/irainman/fast_float/actions/workflows/vs17-ci.yml/badge.svg)](https://github.com/irainman/fast_float/actions/workflows/vs17-ci.yml)
 [![vs17 C++20](https://github.com/irainman/fast_float/actions/workflows/vs17-cxx20.yml/badge.svg)](https://github.com/irainman/fast_float/actions/workflows/vs17-cxx20.yml)
 [![vs17 clang](https://github.com/irainman/fast_float/actions/workflows/vs17-clang-ci.yml/badge.svg)](https://github.com/irainman/fast_float/actions/workflows/vs17-clang-ci.yml)
+[![vs18](https://github.com/irainman/fast_float/actions/workflows/vs18-ci.yml/badge.svg)](https://github.com/irainman/fast_float/actions/workflows/vs18-ci.yml)
+[![vs18 C++23](https://github.com/irainman/fast_float/actions/workflows/vs18-cxx23.yml/badge.svg)](https://github.com/irainman/fast_float/actions/workflows/vs18-cxx23.yml)
+[![vs18 clang](https://github.com/irainman/fast_float/actions/workflows/vs18-clang-ci.yml/badge.svg)](https://github.com/irainman/fast_float/actions/workflows/vs18-clang-ci.yml)
 [![CodeFactor](https://www.codefactor.io/repository/github/irainman/fast_float/badge)](https://www.codefactor.io/repository/github/irainman/fast_float)
 [![codecov](https://codecov.io/github/IRainman/fast_float/graph/badge.svg?token=U90W4FEIDO)](https://codecov.io/github/IRainman/fast_float)
 
