@@ -240,7 +240,7 @@ loop_parse_if_digits(char const *&p, char const *const pend, uint64_t &i) {
   while (std::distance(p, pend) >= sizeof(uint64_t)) {
     auto const val = read_chars_to_unsigned<uint64_t>(p);
     if (is_made_of_eight_digits_fast(val)) {
-      i = i * 100000000/*10 ^ sizeof(uint64_t)*/ +
+      i = i * 100000000 /*10 ^ sizeof(uint64_t)*/ +
           parse_eight_digits_unrolled(val); // may overflow, that's ok
       p += sizeof(uint64_t);
     } else {
@@ -253,7 +253,7 @@ loop_parse_if_digits(char const *&p, char const *const pend, uint64_t &i) {
   if (std::distance(p, pend) >= sizeof(uint32_t)) {
     auto const val = read_chars_to_unsigned<uint32_t>(p);
     if (is_made_of_four_digits_fast(val)) {
-      i = i * 10000/*10 ^ sizeof(uint32_t)*/ +
+      i = i * 10000 /*10 ^ sizeof(uint32_t)*/ +
           parse_four_digits_unrolled(val); // may overflow, that's ok
       p += sizeof(uint32_t);
     }
@@ -300,6 +300,7 @@ template <typename UC> struct parsed_number_string_t {
 using byte_span = span<char const>;
 using parsed_number_string = parsed_number_string_t<char>;
 
+// Helper for error creating
 template <typename UC>
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 parsed_number_string_t<UC>
 report_parse_error(parsed_number_string_t<UC> &answer, UC const *p,
@@ -325,12 +326,11 @@ parse_number_string(UC const *p, UC const *pend,
                     parse_options_t<UC> const options,
                     bool store_spans = true) noexcept {
   parsed_number_string_t<UC> answer{};
-  // so dereference without checks
-  FASTFLOAT_ASSUME(p < pend);
+  FASTFLOAT_ASSUME(p < pend); // so dereference without checks
 #ifndef FASTFLOAT_ONLY_POSITIVE_C_NUMBER_WO_INF_NAN
   answer.negative = (*p == UC('-'));
-  // C++17 20.19.3.(7.1) explicitly forbids '+' sign here
   if (answer.negative ||
+      // C++17 20.19.3.(7.1) explicitly forbids '+' sign here
       ((chars_format_t(options.format & chars_format::allow_leading_plus)) &&
        (!basic_json_fmt && *p == UC('+')))) {
     ++p;
@@ -338,16 +338,17 @@ parse_number_string(UC const *p, UC const *pend,
       return report_parse_error<UC>(
           answer, p, parse_error::missing_integer_or_dot_after_sign);
     }
+
     FASTFLOAT_IF_CONSTEXPR17(basic_json_fmt) {
-      // a sign must be followed by an integer
       if (!is_integer(*p)) {
+        // a sign must be followed by an integer
         return report_parse_error<UC>(answer, p,
                                       parse_error::missing_integer_after_sign);
       }
     }
     else {
-      // a sign must be followed by an integer or the dot
       if (!is_integer(*p) && (*p != options.decimal_point)) {
+        // a sign must be followed by an integer or the dot
         return report_parse_error<UC>(
             answer, p, parse_error::missing_integer_or_dot_after_sign);
       }
@@ -359,7 +360,8 @@ parse_number_string(UC const *p, UC const *pend,
   // Straight-line unroll of the integer-part scan: most integer parts are
   // 1-5 digits, so peeling the first iterations eliminates the loop back-edge
   // for the common case. Semantics are identical to the original `while` loop:
-  // i = 10*i + digit, advancing p.
+  // i = 10*i + digit, advancing p: a multiplication by 10 is cheaper than an
+  // arbitrary integer multiplication. might overflow, handled later
   if ((p != pend) && is_integer(*p)) {
     answer.mantissa = static_cast<fast_float::am_mant_t>(*p - UC('0'));
     ++p;
@@ -384,12 +386,9 @@ parse_number_string(UC const *p, UC const *pend,
                 static_cast<fast_float::am_mant_t>(*p - UC('0')));
             ++p;
             while ((p != pend) && is_integer(*p)) {
-              // a multiplication by 10 is cheaper than an arbitrary integer
-              // multiplication
               answer.mantissa = static_cast<fast_float::am_mant_t>(
                   answer.mantissa * 10 +
-                  static_cast<fast_float::am_mant_t>(
-                      *p - UC('0'))); // might overflow, handled later
+                  static_cast<fast_float::am_mant_t>(*p - UC('0')));
               ++p;
             }
           }
@@ -426,11 +425,10 @@ parse_number_string(UC const *p, UC const *pend,
     loop_parse_if_digits(p, pend, answer.mantissa);
 
     while ((p != pend) && is_integer(*p)) {
-      auto const digit = uint8_t(*p - UC('0'));
-      ++p;
       answer.mantissa = static_cast<fast_float::am_mant_t>(
           answer.mantissa * 10 +
-          digit); // in rare cases, this will overflow, but that's ok
+          static_cast<fast_float::am_mant_t>(*p - UC('0')));
+      ++p;
     }
     answer.exponent = static_cast<am_pow_t>(before - p);
     if fastfloat_unlikely (store_spans) {
@@ -532,19 +530,19 @@ parse_number_string(UC const *p, UC const *pend,
   // of a 64-bit integer. However, this is uncommon.
   //
   // We can deal with up to 19 digits.
-  if fastfloat_unlikely (digit_count > 19) { // this is uncommon
+  if fastfloat_unlikely (digit_count > 19) {
     // It is possible that the integer had an overflow.
     // We have to handle the case where we have 0.0000somenumber.
     // We need to be mindful of the case where we only have zeroes...
     // E.g., 0.000000000...000.
     auto const *start = start_digits;
-    while ((start != pend) &&
-           (*start == UC('0') || *start == options.decimal_point)) {
+    do {
       if (*start == UC('0')) {
         --digit_count;
+      } else if (*start != options.decimal_point) {
+        break;
       }
-      ++start;
-    }
+    } while (++start != pend);
 
     // We have to check if number has more than 19 significant digits.
     if (digit_count > 19) {
@@ -553,7 +551,7 @@ parse_number_string(UC const *p, UC const *pend,
       // store_spans is false we didn't materialize them, so just flag
       // too_many_digits; the caller re-parses with store_spans=true to obtain
       // the corrected mantissa/exponent before taking the slow path.
-      if fastfloat_unlikely (store_spans) {
+      if (store_spans) {
         // Let us start again, this time, avoiding overflows.
         // We don't need to call if is_integer, since we use the
         // pre-tokenized spans from above.
@@ -561,12 +559,11 @@ parse_number_string(UC const *p, UC const *pend,
         p = answer.integer.ptr;
         UC const *int_end = p + answer.integer.len();
         constexpr am_mant_t minimal_nineteen_digit_integer{1000000000000000000};
-        while ((p != int_end) &&
-               (answer.mantissa < minimal_nineteen_digit_integer)) {
+        do {
           answer.mantissa =
               answer.mantissa * 10 + static_cast<am_mant_t>(*p - UC('0'));
-          ++p;
-        }
+        } while ((++p != int_end) &&
+                 (answer.mantissa < minimal_nineteen_digit_integer));
         if (answer.mantissa >= minimal_nineteen_digit_integer) {
           // We have a big integers, so skip the fraction part completely.
           answer.exponent = am_pow_t(end_of_integer_part - p) + exp_number;
@@ -797,7 +794,7 @@ parse_int_string(UC const *p, UC const *pend, T &value,
     // and a single threshold separates wrapped from non-wrapped values. A
     // leading digit above dmax always overflows; below dmax always fits.
     uint64_t const ms = min_safe_u64(options.base);
-    uint64_t const dmax = (std::numeric_limits<uint64_t>::max)() / ms;
+    uint64_t const dmax = std::numeric_limits<uint64_t>::max() / ms;
     uint64_t const lead = ch_to_digit(*start_digits);
     if (lead > dmax || (lead == dmax && i < dmax * ms)) {
       answer.ec = std::errc::result_out_of_range;
