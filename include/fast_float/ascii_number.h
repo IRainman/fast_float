@@ -228,7 +228,7 @@ template <typename UC, FASTFLOAT_ENABLE_IF(!std::is_same<UC, char>::value) = 0>
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 void
 loop_parse_if_digits(UC const *&p, UC const *const pend, uint64_t &i) {
   FASTFLOAT_IF_CONSTEXPR17(!has_simd_opt<UC>()) { return; }
-  while (std::distance(p, pend) >= sizeof(uint64_t) &&
+  while (std::distance(p, pend) >= 8 /*sizeof(uint64_t)*/ &&
          simd_parse_if_eight_digits_unrolled(p, i)) { // may overflow, that's ok
     p += sizeof(uint64_t);
   }
@@ -237,7 +237,7 @@ loop_parse_if_digits(UC const *&p, UC const *const pend, uint64_t &i) {
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 void
 loop_parse_if_digits(char const *&p, char const *const pend, uint64_t &i) {
   // optimizes better than parse_if_eight_digits_unrolled() for UC = char.
-  while (std::distance(p, pend) >= sizeof(uint64_t)) {
+  while (std::distance(p, pend) >= 8 /*sizeof(uint64_t)*/) {
     auto const val = read_chars_to_unsigned<uint64_t>(p);
     if (is_made_of_eight_digits_fast(val)) {
       i = i * 100000000 /*10 ^ sizeof(uint64_t)*/ +
@@ -250,7 +250,7 @@ loop_parse_if_digits(char const *&p, char const *const pend, uint64_t &i) {
   // Consume a remaining 4-7 digit run in a single SWAR step instead of
   // byte-by-byte (reuses the existing 4-digit helpers). The parsed result is
   // identical either way.
-  if (std::distance(p, pend) >= sizeof(uint32_t)) {
+  if (std::distance(p, pend) >= 4 /*sizeof(uint32_t)*/) {
     auto const val = read_chars_to_unsigned<uint32_t>(p);
     if (is_made_of_four_digits_fast(val)) {
       i = i * 10000 /*10 ^ sizeof(uint32_t)*/ +
