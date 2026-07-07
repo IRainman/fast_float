@@ -226,41 +226,38 @@ bool simd_parse_if_eight_digits_unrolled(UC const *, uint64_t &) {
 
 template <typename UC, FASTFLOAT_ENABLE_IF(!std::is_same<UC, char>::value) = 0>
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 void
-loop_parse_if_eight_digits(UC const *&p, UC const *const pend, uint64_t &i) {
+loop_parse_if_digits(UC const *&p, UC const *const pend, uint64_t &i) {
   FASTFLOAT_IF_CONSTEXPR17(!has_simd_opt<UC>()) { return; }
-  while ((std::distance(p, pend) >= 8) &&
-         simd_parse_if_eight_digits_unrolled(
-             p, i)) { // in rare cases, this will overflow, but that's ok
-    p += 8;
+  while (std::distance(p, pend) >= sizeof(uint64_t) &&
+         simd_parse_if_eight_digits_unrolled(p, i)) { // may overflow, that's ok
+    p += sizeof(uint64_t);
   }
 }
 
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 void
-loop_parse_if_eight_digits(char const *&p, char const *const pend,
-                           uint64_t &i) {
+loop_parse_if_digits(char const *&p, char const *const pend, uint64_t &i) {
   // optimizes better than parse_if_eight_digits_unrolled() for UC = char.
-  while ((std::distance(p, pend) >= 8) &&
-         is_made_of_eight_digits_fast(read_chars_to_unsigned<uint64_t>(p))) {
-    i = i * 100000000 +
-        parse_eight_digits_unrolled(read_chars_to_unsigned<uint64_t>(
-            p)); // in rare cases, this will overflow, but that's ok
-    p += 8;
+  while (std::distance(p, pend) >= sizeof(uint64_t)) {
+    auto const val = read_chars_to_unsigned<uint64_t>(p);
+    if (is_made_of_eight_digits_fast(val)) {
+      i = i * 100000000/*10 ^ sizeof(uint64_t)*/ +
+          parse_eight_digits_unrolled(val); // may overflow, that's ok
+      p += sizeof(uint64_t);
+    } else {
+      break;
+    }
   }
   // Consume a remaining 4-7 digit run in a single SWAR step instead of
   // byte-by-byte (reuses the existing 4-digit helpers). The parsed result is
-  // identical either way. Gated to clang: on gcc the extra 4-digit check
-  // regresses inputs whose remainder is shorter than 4 digits (it becomes pure
-  // overhead there); clang does not show that.
-#if 1 // defined(__clang__)
-  if ((pend - p) >= 4) {
-    auto const val4 = read_chars_to_unsigned<uint32_t>(p);
-    if (is_made_of_four_digits_fast(val4)) {
-      i = i * 10000 +
-          parse_four_digits_unrolled(val4); // may overflow, that's ok
-      p += 4;
+  // identical either way.
+  if (std::distance(p, pend) >= sizeof(uint32_t)) {
+    auto const val = read_chars_to_unsigned<uint32_t>(p);
+    if (is_made_of_four_digits_fast(val)) {
+      i = i * 10000/*10 ^ sizeof(uint32_t)*/ +
+          parse_four_digits_unrolled(val); // may overflow, that's ok
+      p += sizeof(uint32_t);
     }
   }
-#endif
 }
 
 enum class parse_error : uint_fast8_t {
@@ -402,7 +399,7 @@ parse_number_string(UC const *p, UC const *pend,
   }
   UC const *const end_of_integer_part = p;
   auto digit_count = static_cast<am_digits>(end_of_integer_part - start_digits);
-  if (store_spans) {
+  if fastfloat_unlikely (store_spans) {
     answer.integer = span<UC const>(start_digits, digit_count);
   }
 #ifndef FASTFLOAT_ONLY_POSITIVE_C_NUMBER_WO_INF_NAN
@@ -426,7 +423,7 @@ parse_number_string(UC const *p, UC const *pend,
     auto const *const before = p;
     // can occur at most twice without overflowing, but let it occur more, since
     // for integers with many digits, digit parsing is the primary bottleneck.
-    loop_parse_if_eight_digits(p, pend, answer.mantissa);
+    loop_parse_if_digits(p, pend, answer.mantissa);
 
     while ((p != pend) && is_integer(*p)) {
       auto const digit = uint8_t(*p - UC('0'));
@@ -436,7 +433,7 @@ parse_number_string(UC const *p, UC const *pend,
           digit); // in rare cases, this will overflow, but that's ok
     }
     answer.exponent = static_cast<am_pow_t>(before - p);
-    if (store_spans) {
+    if fastfloat_unlikely (store_spans) {
       answer.fraction =
           span<UC const>(before, static_cast<am_digits>(p - before));
     }
@@ -550,13 +547,13 @@ parse_number_string(UC const *p, UC const *pend,
     }
 
     // We have to check if number has more than 19 significant digits.
-    if fastfloat_unlikely (digit_count > 19) {
+    if (digit_count > 19) {
       answer.too_many_digits = true;
       // The truncation recompute below reads the integer/fraction spans. When
       // store_spans is false we didn't materialize them, so just flag
       // too_many_digits; the caller re-parses with store_spans=true to obtain
       // the corrected mantissa/exponent before taking the slow path.
-      if (store_spans) {
+      if fastfloat_unlikely (store_spans) {
         // Let us start again, this time, avoiding overflows.
         // We don't need to call if is_integer, since we use the
         // pre-tokenized spans from above.
@@ -749,7 +746,7 @@ parse_int_string(UC const *p, UC const *pend, T &value,
   // Parse digits
   am_mant_t i = 0;
   if (options.base == 10) {
-    loop_parse_if_eight_digits(p, pend, i); // use SIMD if possible
+    loop_parse_if_digits(p, pend, i); // use SIMD if possible
   }
   while (p != pend) {
     auto const digit = ch_to_digit(*p);
