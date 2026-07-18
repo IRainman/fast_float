@@ -249,7 +249,9 @@ loop_parse_if_digits(char const *&p, char const *const pend, uint64_t &i) {
   }
   // Consume a remaining 4-7 digit run in a single SWAR step instead of
   // byte-by-byte (reuses the existing 4-digit helpers). The parsed result is
-  // identical either way.
+  // identical either way. Historically gated to clang because gcc regressed on
+  // short remainders, but that verdict predates the span-elision restructure;
+  // with the leaner hot path the 4-digit step now wins on gcc as well.
   if (std::distance(p, pend) >= 4 /*sizeof(uint32_t)*/) {
     auto const val = read_chars_to_unsigned<uint32_t>(p);
     if (is_made_of_four_digits_fast(val)) {
@@ -302,7 +304,7 @@ using parsed_number_string = parsed_number_string_t<char>;
 
 // Helper for error creating
 template <typename UC>
-fastfloat_really_inline FASTFLOAT_CONSTEXPR20 parsed_number_string_t<UC>
+fastfloat_really_inline FASTFLOAT_CONSTEXPR20 parsed_number_string_t<UC>&
 report_parse_error(parsed_number_string_t<UC> &answer, UC const *p,
                    parse_error error) noexcept {
   answer.invalid = true;
@@ -579,7 +581,7 @@ parse_number_string(UC const *p, UC const *pend,
           }
           answer.exponent = am_pow_t(answer.fraction.ptr - p) + exp_number;
         }
-        // We now corrected both exponent and mantissa, to a truncated value
+        // We have now corrected both exponent and mantissa, to a truncated value
       }
     }
   }
@@ -660,7 +662,7 @@ parse_int_string(UC const *p, UC const *pend, T &value,
           ((digits + 0x46464646u) | (digits - 0x30303030u)) & 0x80808080u;
       auto const tz = countr_zero_32(magic); // 7, 15, 23, 31, or 32
       auto nd = static_cast<am_digits>(tz >> 3);
-      nd = std::min(nd, len);
+      nd = nd < len ? nd : len;
       if (nd == 0) {
         if (has_leading_zeros) {
           value = 0;
@@ -725,13 +727,13 @@ parse_int_string(UC const *p, UC const *pend, T &value,
               answer.ptr = p + 5;
               return answer;
             }
-            value = uint16_t(v);
+            value = static_cast<uint16_t>(v);
             answer.ec = std::errc();
             answer.ptr = p + 5;
             return answer;
           }
           // 4 digits
-          value = uint16_t(v);
+          value = static_cast<uint16_t>(v);
           answer.ec = std::errc();
           answer.ptr = p + 4;
           return answer;

@@ -149,7 +149,7 @@ struct from_chars_result {
 };
 ```
 
-It parses the character sequence `[first, last]` for a number. It parses
+It parses the character sequence `[first, last)` for a number. It parses
 floating-point numbers expecting a locale-independent format equivalent to the
 C++17 from_chars function. The resulting floating-point value is the closest
 floating-point values (using either `float` or `double`), using the "round to
@@ -406,7 +406,7 @@ int main() {
 }
 ```
 
-## Advanced options: using commas as decimal separator, parse JSON, Fortran and more
+## Advanced options: using commas as decimal separator, JSON and Fortran
 
 The C++ standard stipulate that `from_chars` has to be locale-independent. In
 particular, the decimal separator has to be the period (`.`). However, some
@@ -538,6 +538,7 @@ float: 12345678 * 10^23 = 1.23456782e+30 (==expected)
 
 Overloads of `fast_float::integer_times_pow10()` are provided for
 signed and unsigned integer types: `int64_t`, `uint64_t`, etc.
+
 
 ## Users and Related Work
 
@@ -726,11 +727,6 @@ was originally published under the Apache 2.0 license.
 ## SAST Tools
 
 [PVS-Studio](https://pvs-studio.com/en/pvs-studio/?utm_source=website&utm_medium=github&utm_campaign=open_source) - static analyzer for C, C++, C#, and Java code.
-
-## Stars
-
-
-[![Star History Chart](https://api.star-history.com/svg?repos=fastfloat/fast_float&type=Date)](https://www.star-history.com/#fastfloat/fast_float&Date)
 
 ## License
 

@@ -24,7 +24,7 @@ jobs:
   lint-and-format:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@4f1f4aec02e41874fa0262ea8ff5172d7978ad1e # v4.1.7
+      - uses: actions/checkout@e8d4307400f9427dba7cb98e488d6ab85f1cec5f # v4.1.7
 
       - name: Run clang-format
         uses: jidicula/clang-format-action@654a770daa28443dd111d133e4083e21c1075674 # v4.18.0

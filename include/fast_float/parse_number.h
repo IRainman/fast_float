@@ -16,7 +16,7 @@ namespace fast_float {
 namespace detail {
 #ifndef FASTFLOAT_ONLY_POSITIVE_C_NUMBER_WO_INF_NAN
 /**
- * Special case inf, +inf, -inf, nan, infinity, -infinity.
+ * Special case +inf, -inf, nan, infinity, -infinity.
  * The case comparisons could be made much faster given that we know that the
  * strings a null-free and fixed.
  **/
@@ -163,10 +163,7 @@ template <> struct from_chars_caller<std::float32_t> {
     // if std::float32_t is defined, and we are in C++23 mode; macro set for
     // float32; set value to float due to equivalence between float and
     // float32_t
-    float val = 0;
-    auto ret = from_chars_advanced(first, last, val, options);
-    value = val;
-    return ret;
+    return from_chars_advanced(first, last, value, options);
   }
 };
 #endif
@@ -180,10 +177,7 @@ template <> struct from_chars_caller<std::float64_t> {
     // if std::float64_t is defined, and we are in C++23 mode; macro set for
     // float64; set value as double due to equivalence between double and
     // float64_t
-    double val = 0;
-    auto ret = from_chars_advanced(first, last, val, options);
-    value = val;
-    return ret;
+    return from_chars_advanced(first, last, value, options);
   }
 };
 #endif
@@ -209,7 +203,14 @@ clinger_fast_path_impl(am_mant_t const mantissa, am_pow_t const exponent,
   // We proceed optimistically, assuming that detail::rounds_to_nearest()
   // returns true.
   if (binary_format<T>::min_exponent_fast_path() <= exponent &&
-      exponent <= binary_format<T>::max_exponent_fast_path()) {
+      exponent <= binary_format<T>::max_exponent_fast_path() &&
+      mantissa <= binary_format<T>::max_mantissa_fast_path()) {
+    // The mantissa bound above is a necessary condition for BOTH branches
+    // below: the rounding-mode-dependent branch checks the tighter
+    // max_mantissa_fast_path(exponent) <= max_mantissa_fast_path(). Testing
+    // it before detail::rounds_to_nearest() spares long-mantissa inputs
+    // (which can never take the fast path) the volatile-float probe.
+    //
     // Unfortunately, the conventional Clinger's fast path is only possible
     // when the system rounds to the nearest float.
     //
@@ -329,10 +330,10 @@ from_chars_advanced(parsed_number_string_t<UC> const &pns, T &value) noexcept {
 template <typename T, typename UC>
 FASTFLOAT_CONSTEXPR20 from_chars_result_t<UC>
 parse_number_slow_path(UC const *first, UC const *last, T &value,
-                       parse_options_t<UC> options
+                       parse_options_t<UC> const options
 #ifndef FASTFLOAT_ONLY_POSITIVE_C_NUMBER_WO_INF_NAN
                        ,
-                       bool bjf
+                       bool const bjf
 #endif
                        ) noexcept {
   parsed_number_string_t<UC> const pns =
