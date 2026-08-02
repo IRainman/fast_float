@@ -304,7 +304,7 @@ using parsed_number_string = parsed_number_string_t<char>;
 
 // Helper for error creating
 template <typename UC>
-fastfloat_really_inline FASTFLOAT_CONSTEXPR20 parsed_number_string_t<UC>&
+fastfloat_really_inline FASTFLOAT_CONSTEXPR20 parsed_number_string_t<UC> &
 report_parse_error(parsed_number_string_t<UC> &answer, UC const *p,
                    parse_error error) noexcept {
   answer.invalid = true;
@@ -581,7 +581,8 @@ parse_number_string(UC const *p, UC const *pend,
           }
           answer.exponent = am_pow_t(answer.fraction.ptr - p) + exp_number;
         }
-        // We have now corrected both exponent and mantissa, to a truncated value
+        // We have now corrected both exponent and mantissa, to a truncated
+        // value
       }
     }
   }
