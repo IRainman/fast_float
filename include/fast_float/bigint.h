@@ -119,14 +119,12 @@ template <limb_t size> struct stackvec {
   FASTFLOAT_CONSTEXPR20
   void resize_unchecked(limb_t new_len, limb value) noexcept {
     if (new_len > len()) {
-      auto count = new_len - len();
+      auto const count = new_len - len();
       limb *first = data + len();
       limb *last = first + count;
       ::std::fill(first, last, value);
-      set_len(new_len);
-    } else {
-      set_len(new_len);
     }
+    set_len(new_len);
   }
 
   // try to resize the vector, returning if the vector was resized.
@@ -169,13 +167,13 @@ empty_hi64(bool &truncated) noexcept {
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 uint64_t
 uint64_hi64(uint64_t r0, bool &truncated) noexcept {
   truncated = false;
-  auto shl = leading_zeroes(r0);
+  auto const shl = leading_zeroes(r0);
   return r0 << shl;
 }
 
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 uint64_t
 uint64_hi64(uint64_t r0, uint64_t r1, bool &truncated) noexcept {
-  auto shl = leading_zeroes(r0);
+  auto const shl = leading_zeroes(r0);
   if (shl == 0) {
     truncated = r1 != 0;
     return r0;
@@ -258,7 +256,7 @@ scalar_mul(limb x, limb y, limb &carry) noexcept {
 // add scalar value to bigint starting from offset.
 // used in grade school multiplication
 template <limb_t size>
-inline FASTFLOAT_CONSTEXPR20 bool
+fastfloat_really_inline FASTFLOAT_CONSTEXPR20 bool
 small_add_from(stackvec<size> &vec, limb carry, limb_t start) noexcept {
   bool overflow;
   while (carry != 0 && start < vec.len()) {
@@ -281,8 +279,8 @@ small_add(stackvec<size> &vec, limb y) noexcept {
 
 // multiply bigint by scalar value.
 template <limb_t size>
-inline FASTFLOAT_CONSTEXPR20 bool small_mul(stackvec<size> &vec,
-                                            limb y) noexcept {
+fastfloat_really_inline FASTFLOAT_CONSTEXPR20 bool
+small_mul(stackvec<size> &vec, limb y) noexcept {
   limb carry = 0;
   for (limb_t index = 0; index != vec.len(); ++index) {
     vec[index] = scalar_mul(vec[index], y, carry);
@@ -296,8 +294,8 @@ inline FASTFLOAT_CONSTEXPR20 bool small_mul(stackvec<size> &vec,
 // add bigint to bigint starting from index.
 // used in grade school multiplication
 template <limb_t size>
-FASTFLOAT_CONSTEXPR20 bool large_add_from(stackvec<size> &x, limb_span y,
-                                          limb_t start) noexcept {
+fastfloat_really_inline FASTFLOAT_CONSTEXPR20 bool
+large_add_from(stackvec<size> &x, limb_span y, limb_t start) noexcept {
   // the effective x buffer is from `xstart..x.len()`, so exit early
   // if we can't get that current range.
   if (x.len() < start ||
@@ -308,7 +306,7 @@ FASTFLOAT_CONSTEXPR20 bool large_add_from(stackvec<size> &x, limb_span y,
   bool carry = false;
   for (limb_t index = 0; index != y.len(); ++index) {
     limb xi = x[index + start];
-    limb yi = y[index];
+    limb const yi = y[index];
     bool c1 = false;
     bool c2 = false;
     xi = scalar_add(xi, yi, c1);
@@ -335,7 +333,8 @@ large_add_from(stackvec<size> &x, limb_span y) noexcept {
 
 // grade-school multiplication algorithm
 template <limb_t size>
-FASTFLOAT_CONSTEXPR20 bool long_mul(stackvec<size> &x, limb_span y) noexcept {
+fastfloat_really_inline FASTFLOAT_CONSTEXPR20 bool
+long_mul(stackvec<size> &x, limb_span y) noexcept {
   limb_span xs = limb_span(x.data, x.len());
   stackvec<size> z(xs);
   limb_span zs = limb_span(z.data, z.len());
@@ -343,8 +342,8 @@ FASTFLOAT_CONSTEXPR20 bool long_mul(stackvec<size> &x, limb_span y) noexcept {
   if (y.len() != 0) {
     limb y0 = y[0];
     FASTFLOAT_TRY(small_mul(x, y0));
-    for (limb_t index = 1; index < y.len(); ++index) {
-      limb yi = y[index];
+    for (limb_t index = 1; index != y.len(); ++index) {
+      limb const yi = y[index];
       stackvec<size> zi;
       if (yi != 0) {
         // re-use the same buffer throughout
@@ -363,7 +362,8 @@ FASTFLOAT_CONSTEXPR20 bool long_mul(stackvec<size> &x, limb_span y) noexcept {
 
 // grade-school multiplication algorithm
 template <limb_t size>
-FASTFLOAT_CONSTEXPR20 bool large_mul(stackvec<size> &x, limb_span y) noexcept {
+fastfloat_really_inline FASTFLOAT_CONSTEXPR20 bool
+large_mul(stackvec<size> &x, limb_span y) noexcept {
   if (y.len() == 1) {
     FASTFLOAT_TRY(small_mul(x, y[0]));
   } else {
@@ -491,9 +491,9 @@ struct bigint : pow5_tables<> {
     } else if (vec.len() < other.vec.len()) {
       return -1;
     } else {
-      for (limb_t index = vec.len(); index > 0; --index) {
-        limb xi = vec[index - 1];
-        limb yi = other.vec[index - 1];
+      for (limb_t index = vec.len(); index != 0; --index) {
+        limb const xi = vec[index - 1];
+        limb const yi = other.vec[index - 1];
         if (xi > yi) {
           return 1;
         } else if (xi < yi) {
