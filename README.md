@@ -204,7 +204,7 @@ When parsing floating-point values, the numbers can sometimes be too small
 (e.g., `1e-1000`) or too large (e.g., `1e1000`). The C language established the
 precedent that these small values are out of range. In such cases, it is
 customary to parse small values to zero and large values to infinity. That is
-the behaviour of the C language (e.g., `stdtod`). That is the behaviour followed
+the behaviour of the C language (e.g., `strtod`). That is the behaviour followed
 by the fast_float library.
 
 Specifically, we follow Jonathan Wakely's interpretation of the standard:
