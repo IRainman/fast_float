@@ -25,6 +25,7 @@ jobs:
         with:
           arch: ${{ matrix.arch }}
           branch: ${{ matrix.arch == 'riscv64' && 'edge' || 'latest-stable' }}
+          cache-key: ${{ github.run_id }}
           packages: >
             build-base
             cmake
@@ -32,7 +33,6 @@ jobs:
             linux-headers
             git
             bash
-            build-base
       - name: Prepare
         run: |
           cmake -DFASTFLOAT_TEST=ON -B build
