@@ -70,7 +70,7 @@ read_chars_to_unsigned(UC const *chars) noexcept {
 #ifdef FASTFLOAT_X86_SIMD
 
 fastfloat_really_inline uint64_t simd_read8_to_u64(__m128i const data) {
-  // _mm_packus_epi16 is SSE2+, converts 8×u16 → 8×u8
+  // _mm_packus_epi16 is SSE2, converts 8×u16 → 8×u8
   __m128i const packed = _mm_packus_epi16(data, data);
 #ifdef FASTFLOAT_64BIT
   return static_cast<uint64_t>(_mm_cvtsi128_si64(packed));
@@ -468,7 +468,7 @@ loop_parse_if_digits(UC const *&p, UC const *const pend, uint64_t &i) {
   FASTFLOAT_IF_CONSTEXPR17(!has_simd_opt<UC>()) { return; }
   while (std::distance(p, pend) >= 8 /*sizeof(uint64_t)*/ &&
          simd_parse_if_eight_digits_unrolled(p, i)) { // may overflow, that's ok
-    p += sizeof(uint64_t);
+    p += 8 /*sizeof(uint64_t)*/;
   }
 }
 
