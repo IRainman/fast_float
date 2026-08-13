@@ -193,10 +193,15 @@ using parse_options = parse_options_t<char>;
 #endif
 
 #ifdef FASTFLOAT_X86_SIMD // user defined level
-static_assert(FASTFLOAT_X86_SIMD >= 20 && FASTFLOAT_X86_SIMD <= 42,
-                "FASTFLOAT_X86_SIMD should be between 20(SSE2) and 42(SSE4.2)");
+static_assert(FASTFLOAT_X86_SIMD >= 20 && FASTFLOAT_X86_SIMD <= 52,
+              "FASTFLOAT_X86_SIMD should be between 20(SSE2) and 42(SSE4.2) "
+              "and optionally up to 52(AVX2)");
 #else // auto detect
-#if defined(__SSE4_2__)
+#if defined(__AVX2__)
+#define FASTFLOAT_X86_SIMD 52
+#elif defined(__AVX__) // On MSVC there's no way to check for SSE4.2 specifically so check __AVX__.
+#define FASTFLOAT_X86_SIMD 50
+#elif defined(__SSE4_2__)
 #define FASTFLOAT_X86_SIMD 42
 #elif defined(__SSE4_1__)
 #define FASTFLOAT_X86_SIMD 41
@@ -517,7 +522,8 @@ template <typename T> struct span {
   }
 };
 
-struct alignas(16) value128 {
+/* alignas(16) - better data cache usage wo align */
+struct value128 {
   uint64_t low;
   uint64_t high;
 
@@ -568,7 +574,7 @@ leading_zeroes(uint64_t input_num) noexcept {
     return leading_zeroes_generic(input_num);
   }
 #ifdef FASTFLOAT_VISUAL_STUDIO
-#if defined(__AVX2__)
+#if FASTFLOAT_X86_SIMD >= 52
   // use lzcnt on MSVC only on AVX2 capable CPU's that all have this BMI
   // instruction
   return __lzcnt64(input_num);
@@ -696,7 +702,8 @@ full_multiplication(uint64_t a, uint64_t b) noexcept {
   return answer;
 }
 
-struct /* alignas(16) */ adjusted_mantissa {
+/* alignas(16) - better data cache usage witout align */
+struct adjusted_mantissa {
   am_mant_t mantissa;
   am_pow_t power2;
 

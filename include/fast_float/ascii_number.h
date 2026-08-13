@@ -11,21 +11,7 @@
 #include "float_common.h"
 
 #if defined(FASTFLOAT_X86_SIMD)
-#include <emmintrin.h>
-#ifdef FASTFLOAT_SSE_PATCH_REWORK
-#if FASTFLOAT_X86_SIMD >= 30
-#include <pmmintrin.h>
-#endif
-#if FASTFLOAT_X86_SIMD >= 31
-#include <tmmintrin.h>
-#endif
-#if FASTFLOAT_X86_SIMD >= 41
-#include <smmintrin.h>
-#endif
-#if FASTFLOAT_X86_SIMD >= 42
-#include <nmmintrin.h>
-#endif
-#endif
+#include <immintrin.h>
 #elif defined(FASTFLOAT_ARM_NEON)
 #include <arm_neon.h>
 #endif
