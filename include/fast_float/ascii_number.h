@@ -10,9 +10,23 @@
 
 #include "float_common.h"
 
-#if defined(FASTFLOAT_SSE2)
+#if defined(FASTFLOAT_X86_SIMD)
 #include <emmintrin.h>
-#elif defined(FASTFLOAT_NEON)
+#ifdef FASTFLOAT_SSE_PATCH_REWORK
+#if FASTFLOAT_X86_SIMD >= 30
+#include <pmmintrin.h>
+#endif
+#if FASTFLOAT_X86_SIMD >= 31
+#include <tmmintrin.h>
+#endif
+#if FASTFLOAT_X86_SIMD >= 41
+#include <smmintrin.h>
+#endif
+#if FASTFLOAT_X86_SIMD >= 42
+#include <nmmintrin.h>
+#endif
+#endif
+#elif defined(FASTFLOAT_ARM_NEON)
 #include <arm_neon.h>
 #endif
 
@@ -67,7 +81,7 @@ read_chars_to_unsigned(UC const *chars) noexcept {
   return val;
 }
 
-#ifdef FASTFLOAT_SSE2
+#ifdef FASTFLOAT_X86_SIMD
 
 fastfloat_really_inline uint64_t simd_read8_to_u64(__m128i const data) {
   // _mm_packus_epi16 is SSE2+, converts 8×u16 → 8×u8
@@ -90,7 +104,7 @@ fastfloat_really_inline uint64_t simd_read8_to_u64(char16_t const *chars) {
   FASTFLOAT_SIMD_RESTORE_WARNINGS
 }
 
-#elif defined(FASTFLOAT_NEON)
+#elif defined(FASTFLOAT_ARM_NEON)
 
 fastfloat_really_inline uint64_t simd_read8_to_u64(uint16x8_t const &data) {
   uint8x8_t utf8_packed = vmovn_u16(data);
@@ -104,7 +118,7 @@ fastfloat_really_inline uint64_t simd_read8_to_u64(char16_t const *chars) {
   FASTFLOAT_SIMD_RESTORE_WARNINGS
 }
 
-#endif // FASTFLOAT_SSE2
+#endif // FASTFLOAT_X86_SIMD
 
 // MSVC SFINAE is broken pre-VS2017
 #if defined(_MSC_VER) && _MSC_VER <= 1900
@@ -161,6 +175,244 @@ parse_four_digits_unrolled(uint32_t val) noexcept {
 
 #ifdef FASTFLOAT_HAS_SIMD
 
+#ifdef FASTFLOAT_SSE_PATCH_REWORK
+
+#ifdef FASTFLOAT_X86_SIMD
+
+namespace detail {
+
+fastfloat_really_inline bool x86_all_8_digits(__m128i data) noexcept {
+  const __m128i zero = _mm_set1_epi8('0');
+  const __m128i nine = _mm_set1_epi8('9');
+
+  const __m128i below = _mm_cmplt_epi8(data, zero);
+  const __m128i above = _mm_cmpgt_epi8(data, nine);
+  const __m128i bad = _mm_or_si128(below, above);
+#if FASTFLOAT_X86_SIMD >= 41
+  /*
+   * SSE4.1 PTEST.
+   *
+   * This is preferable to extracting a 16-bit mask when SSE4.1
+   * is available.
+   */
+  return _mm_testz_si128(bad, bad) != 0;
+#else
+  return _mm_movemask_epi8(bad) == 0;
+#endif
+}
+
+fastfloat_really_inline uint32_t x86_parse_8_digits(__m128i data) noexcept {
+#if FASTFLOAT_X86_SIMD >= 31
+  /*
+   * Convert ASCII:
+   *
+   *   '0'..'9'
+   *
+   * into:
+   *
+   *   0..9
+   */
+  data = _mm_sub_epi8(data, _mm_set1_epi8('0'));
+
+  /*
+   * [d0 d1 d2 d3 d4 d5 d6 d7]
+   *
+   * PMADDUBSW:
+   *
+   * [10*d0+d1,
+   *  10*d2+d3,
+   *  10*d4+d5,
+   *  10*d6+d7]
+   */
+  const __m128i pair =
+      _mm_maddubs_epi16(data, _mm_setr_epi8(10, 1, 10, 1, 10, 1, 10, 1, 10, 1,
+                                            10, 1, 10, 1, 10, 1));
+
+  /*
+   * PMADDWD:
+   *
+   * [12,34,56,78]
+   *
+   * ->
+   *
+   * [1234,5678]
+   */
+  const __m128i quad =
+      _mm_madd_epi16(pair, _mm_setr_epi16(100, 1, 100, 1, 100, 1, 100, 1));
+
+  alignas(16) uint32_t v[4];
+  _mm_store_si128(reinterpret_cast<__m128i *>(v), quad);
+
+  return v[0] * 10000u + v[1];
+#else
+  /*
+   * SSE2 fallback.
+   *
+   * SSE3 itself has no PMADDUBSW, therefore use the existing
+   * SWAR algorithm. This still avoids byte-at-a-time parsing.
+   */
+  uint64_t value;
+
+#if defined(FASTFLOAT_64BIT)
+  value = static_cast<uint64_t>(_mm_cvtsi128_si64(data));
+#else
+  _mm_storel_epi64(reinterpret_cast<__m128i *>(&value), data);
+#endif
+
+  return parse_eight_digits_unrolled(value);
+#endif
+}
+
+fastfloat_really_inline bool x86_parse_if_8_digits(char const *chars,
+                                                   uint64_t &value) noexcept {
+  FASTFLOAT_SIMD_DISABLE_WARNINGS
+  const __m128i data =
+      _mm_loadl_epi64(reinterpret_cast<__m128i const *>(chars));
+  FASTFLOAT_SIMD_RESTORE_WARNINGS
+  if (!x86_all_8_digits(data))
+    return false;
+
+  const uint32_t digits = x86_parse_8_digits(data);
+
+  value = value * 100000000UL + digits;
+  return true;
+}
+
+fastfloat_really_inline uint32_t
+x86_parse_8_digits_unchecked(char const *p) noexcept {
+
+#if FASTFLOAT_X86_SIMD >= 31
+
+  const __m128i data = _mm_loadl_epi64(reinterpret_cast<const __m128i *>(p));
+
+  const __m128i digits = _mm_sub_epi8(data, _mm_set1_epi8('0'));
+
+  const __m128i pairs =
+      _mm_maddubs_epi16(digits, _mm_setr_epi8(10, 1, 10, 1, 10, 1, 10, 1, 10, 1,
+                                              10, 1, 10, 1, 10, 1));
+
+  const __m128i quads =
+      _mm_madd_epi16(pairs, _mm_setr_epi16(100, 1, 100, 1, 100, 1, 100, 1));
+
+  const uint32_t lo = static_cast<uint32_t>(_mm_cvtsi128_si32(quads));
+
+  const uint32_t hi = static_cast<uint32_t>(_mm_extract_epi32(quads, 1));
+
+  return lo * 10000U + hi;
+
+#else
+  /*
+   * SSE3/SSE2/32-bit:
+   *
+   * No PMADDUBSW, so use the existing SWAR
+   * implementation. The input is already known
+   * to contain digits.
+   */
+  const uint64_t raw = read_chars_to_unsigned<uint64_t>(p);
+  return parse_eight_digits_unrolled(raw);
+#endif
+}
+
+#if FASTFLOAT_X86_SIMD >= 42
+
+fastfloat_really_inline bool x86_parse_if_16_digits(char const *chars,
+                                                    uint64_t &value) noexcept {
+  FASTFLOAT_SIMD_DISABLE_WARNINGS
+  const __m128i data =
+      _mm_loadu_si128(reinterpret_cast<__m128i const *>(chars));
+  FASTFLOAT_SIMD_RESTORE_WARNINGS
+  /*
+   * PCMPxSTRI range comparison.
+   *
+   * First operand:
+   *
+   *   ['0','9']
+   *
+   * Second operand:
+   *
+   *   16 input bytes
+   *
+   * Negative polarity asks for the first byte which is
+   * NOT inside the digit range.
+   */
+  const __m128i ranges =
+      _mm_setr_epi8('0', '9', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+
+  const int valid =
+      _mm_cmpestri(ranges, 2, data, 16,
+                   _SIDD_UBYTE_OPS | _SIDD_CMP_RANGES |
+                       _SIDD_NEGATIVE_POLARITY | _SIDD_LEAST_SIGNIFICANT);
+
+  if (valid != 16)
+    return false;
+
+  const uint32_t lo = x86_parse_8_digits(data);
+
+  const uint32_t hi = x86_parse_8_digits(_mm_srli_si128(data, 8));
+
+  value = value * 10000000000000000UL +
+          static_cast<uint64_t>(lo) * 100000000UL + hi;
+
+  return true;
+}
+
+fastfloat_really_inline uint64_t
+x86_parse_16_digits_unchecked(char const *p) noexcept {
+
+  const __m128i data = _mm_loadu_si128(reinterpret_cast<const __m128i *>(p));
+
+  const uint32_t lo = x86_parse_8_digits_unchecked(p);
+
+  const uint32_t hi = x86_parse_8_digits_unchecked(p + 8);
+
+  return static_cast<uint64_t>(lo) * 100000000UL + static_cast<uint64_t>(hi);
+}
+
+#endif // FASTFLOAT_X86_SIMD >= 42
+
+fastfloat_really_inline void
+x86_parse_digits_unchecked_until_19(char const *&p, char const *end,
+                                    am_mant_t &mantissa) noexcept {
+  constexpr am_mant_t minimal_nineteen_digit_integer{1000000000000000000ULL};
+#if FASTFLOAT_X86_SIMD >= 42
+  /*
+   * If mantissa has fewer than two digits, a complete
+   * 16-digit block cannot exceed 10^18 - 1.
+   */
+  if (mantissa < am_mant_t(100) && (end - p) >= 16) {
+    const uint64_t value = x86_parse_16_digits_unchecked(p);
+
+    mantissa = mantissa * am_mant_t(10000000000000000ULL) +
+               static_cast<am_mant_t>(value);
+    p += 16;
+  }
+#endif
+  /*
+   * An 8-digit block is safe while:
+   *
+   *     mantissa < 10^10
+   *
+   * because the result is guaranteed < 10^18.
+   */
+  while ((end - p) >= 8 && mantissa < am_mant_t(10000000000ULL)) {
+    const uint32_t value = x86_parse_8_digits_unchecked(p);
+    mantissa =
+        mantissa * am_mant_t(100000000ULL) + static_cast<am_mant_t>(value);
+    p += 8;
+  }
+  /*
+   * finalizer
+   */
+  while (p != end && mantissa < minimal_nineteen_digit_integer) {
+    mantissa = mantissa * am_mant_t(10) + static_cast<am_mant_t>(*p - '0');
+    ++p;
+  }
+}
+#endif
+}
+
+#endif
+
 // Call this if chars might not be 8 digits.
 // Using this style (instead of is_made_of_eight_digits_fast() then
 // parse_eight_digits_unrolled()) ensures we don't load SIMD registers twice.
@@ -170,7 +422,7 @@ simd_parse_if_eight_digits_unrolled(char16_t const *chars,
   if (cpp20_and_in_constexpr()) {
     return false;
   }
-#ifdef FASTFLOAT_SSE2
+#ifdef FASTFLOAT_X86_SIMD
   FASTFLOAT_SIMD_DISABLE_WARNINGS
   // Load 8 UTF-16 characters (16 bytes)
   // unaligned SIMD instruction -> all fine.
@@ -190,7 +442,7 @@ simd_parse_if_eight_digits_unrolled(char16_t const *chars,
     i = i * 100000000 + parse_eight_digits_unrolled(simd_read8_to_u64(data));
     return true;
   }
-#elif defined(FASTFLOAT_NEON)
+#elif defined(FASTFLOAT_ARM_NEON)
   FASTFLOAT_SIMD_DISABLE_WARNINGS
   uint16x8_t const data = vld1q_u16(reinterpret_cast<uint16_t const *>(chars));
   FASTFLOAT_SIMD_RESTORE_WARNINGS
@@ -207,7 +459,7 @@ simd_parse_if_eight_digits_unrolled(char16_t const *chars,
 #else
   (void)chars;
   (void)i;
-#endif // FASTFLOAT_SSE2
+#endif // FASTFLOAT_X86_SIMD
   return false;
 }
 
@@ -236,6 +488,31 @@ loop_parse_if_digits(UC const *&p, UC const *const pend, uint64_t &i) {
 
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 void
 loop_parse_if_digits(char const *&p, char const *const pend, uint64_t &i) {
+#if defined(FASTFLOAT_SSE_PATCH_REWORK) && defined(FASTFLOAT_X86_SIMD)
+#if FASTFLOAT_X86_SIMD >= 42
+  /*
+   * SSE4.2 handles 16 bytes at once.
+   *
+   * This is only used when a complete 16-byte block exists,
+   * so the load is always inside [p, pend).
+   */
+  while (std::distance(p, pend) >= 16) {
+    if (!detail::x86_parse_if_16_digits(p, i)) {
+      break;
+    }
+    p += 16;
+  }
+#endif
+  /*
+   * 8-byte SIMD path.
+   */
+  while (std::distance(p, pend) >= 8 /*sizeof(uint64_t)*/) {
+    if (!detail::x86_parse_if_8_digits(p, i)) {
+      break;
+    }
+    p += 8;
+  }
+#else
   // optimizes better than parse_if_eight_digits_unrolled() for UC = char.
   while (std::distance(p, pend) >= 8 /*sizeof(uint64_t)*/) {
     auto const val = read_chars_to_unsigned<uint64_t>(p);
@@ -247,6 +524,7 @@ loop_parse_if_digits(char const *&p, char const *const pend, uint64_t &i) {
       break;
     }
   }
+#endif
   // Consume a remaining 4-7 digit run in a single SWAR step instead of
   // byte-by-byte (reuses the existing 4-digit helpers). The parsed result is
   // identical either way. Historically gated to clang because gcc regressed on
@@ -561,11 +839,19 @@ parse_number_string(UC const *p, UC const *pend,
         p = answer.integer.ptr;
         UC const *int_end = p + answer.integer.len();
         constexpr am_mant_t minimal_nineteen_digit_integer{1000000000000000000};
-        do {
-          answer.mantissa =
-              answer.mantissa * 10 + static_cast<am_mant_t>(*p - UC('0'));
-        } while ((++p != int_end) &&
-                 (answer.mantissa < minimal_nineteen_digit_integer));
+#if defined(FASTFLOAT_SSE_PATCH_REWORK) && defined(FASTFLOAT_X86_SIMD)
+        if constexpr (std::is_same<UC, char>::value) {
+          detail::x86_parse_digits_unchecked_until_19(p, int_end,
+                                                      answer.mantissa);
+        } else
+#endif
+        {
+          do {
+            answer.mantissa =
+                answer.mantissa * 10 + static_cast<am_mant_t>(*p - UC('0'));
+          } while ((++p != int_end) &&
+                   (answer.mantissa < minimal_nineteen_digit_integer));
+        }
         if (answer.mantissa >= minimal_nineteen_digit_integer) {
           // We have a big integers, so skip the fraction part completely.
           answer.exponent = am_pow_t(end_of_integer_part - p) + exp_number;
@@ -573,11 +859,19 @@ parse_number_string(UC const *p, UC const *pend,
           // We have a value with a significant fractional component.
           p = answer.fraction.ptr;
           UC const *const frac_end = p + answer.fraction.len();
-          while ((p != frac_end) &&
-                 (answer.mantissa < minimal_nineteen_digit_integer)) {
-            answer.mantissa = static_cast<am_mant_t>(
-                answer.mantissa * 10 + static_cast<am_mant_t>(*p - UC('0')));
-            ++p;
+#if defined(FASTFLOAT_SSE_PATCH_REWORK) && defined(FASTFLOAT_X86_SIMD)
+          if constexpr (std::is_same<UC, char>::value) {
+            detail::x86_parse_digits_unchecked_until_19(p, frac_end,
+                                                        answer.mantissa);
+          } else
+#endif
+          {
+            while ((p != frac_end) &&
+                   (answer.mantissa < minimal_nineteen_digit_integer)) {
+              answer.mantissa = static_cast<am_mant_t>(
+                  answer.mantissa * 10 + static_cast<am_mant_t>(*p - UC('0')));
+              ++p;
+            }
           }
           answer.exponent = am_pow_t(answer.fraction.ptr - p) + exp_number;
         }

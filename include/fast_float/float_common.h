@@ -192,17 +192,30 @@ using parse_options = parse_options_t<char>;
 #endif
 #endif
 
-#if defined(__SSE2__) || (defined(FASTFLOAT_VISUAL_STUDIO) &&                  \
-                          (defined(_M_AMD64) || defined(_M_X64) ||             \
-                           (defined(_M_IX86_FP) && _M_IX86_FP == 2)))
-#define FASTFLOAT_SSE2 1
+#ifdef FASTFLOAT_X86_SIMD // user defined level
+static_assert(FASTFLOAT_X86_SIMD >= 20 && FASTFLOAT_X86_SIMD <= 42,
+                "FASTFLOAT_X86_SIMD should be between 20(SSE2) and 42(SSE4.2)");
+#else // auto detect
+#if defined(__SSE4_2__)
+#define FASTFLOAT_X86_SIMD 42
+#elif defined(__SSE4_1__)
+#define FASTFLOAT_X86_SIMD 41
+#elif defined(__SSSE3__)
+#define FASTFLOAT_X86_SIMD 31
+#elif defined(__SSE3__)
+#define FASTFLOAT_X86_SIMD 30
+#elif defined(__SSE2__) || (defined(FASTFLOAT_VISUAL_STUDIO) &&                \
+                            (defined(_M_AMD64) || defined(_M_X64) ||           \
+                             (defined(_M_IX86_FP) && _M_IX86_FP == 2)))
+#define FASTFLOAT_X86_SIMD 20
+#endif
 #endif
 
 #if defined(__aarch64__) || defined(_M_ARM64)
-#define FASTFLOAT_NEON 1
+#define FASTFLOAT_ARM_NEON 1
 #endif
 
-#if defined(FASTFLOAT_SSE2) || defined(FASTFLOAT_NEON)
+#if defined(FASTFLOAT_X86_SIMD) || defined(FASTFLOAT_ARM_NEON)
 #define FASTFLOAT_HAS_SIMD 1
 #endif
 
