@@ -4,7 +4,7 @@
 #define FASTFLOAT_ISNOT_CHECKED_BOUNDS
 // #define FASTFLOAT_SSE_PATCH_REWORK // WIP, only for test!
 #ifdef FASTFLOAT_SSE_PATCH_REWORK
- #define FASTFLOAT_X86_SIMD 42
+#define FASTFLOAT_X86_SIMD 42
 #endif
 
 #if defined(__linux__) || (__APPLE__ && __aarch64__)
