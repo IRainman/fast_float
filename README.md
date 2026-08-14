@@ -4,7 +4,6 @@
 [![Ubuntu 22.04 clang](https://github.com/irainman/fast_float/actions/workflows/ubuntu22-clang.yml/badge.svg)](https://github.com/irainman/fast_float/actions/workflows/ubuntu22-clang.yml)
 [![Ubuntu 24.04](https://github.com/irainman/fast_float/actions/workflows/ubuntu24.yml/badge.svg)](https://github.com/irainman/fast_float/actions/workflows/ubuntu24.yml)
 [![Ubuntu 24.04 C++20](https://github.com/irainman/fast_float/actions/workflows/ubuntu24-cxx20.yml/badge.svg)](https://github.com/irainman/fast_float/actions/workflows/ubuntu24-cxx20.yml)
-[![Alpine](https://github.com/irainman/fast_float/actions/workflows/alpine.yml/badge.svg)](https://github.com/irainman/fast_float/actions/workflows/alpine.yml)
 [![vs17](https://github.com/irainman/fast_float/actions/workflows/vs17-ci.yml/badge.svg)](https://github.com/irainman/fast_float/actions/workflows/vs17-ci.yml)
 [![vs17 C++20](https://github.com/irainman/fast_float/actions/workflows/vs17-cxx20.yml/badge.svg)](https://github.com/irainman/fast_float/actions/workflows/vs17-cxx20.yml)
 [![vs17 clang](https://github.com/irainman/fast_float/actions/workflows/vs17-clang-ci.yml/badge.svg)](https://github.com/irainman/fast_float/actions/workflows/vs17-clang-ci.yml)
