@@ -199,7 +199,8 @@ static_assert(FASTFLOAT_X86_SIMD >= 20 && FASTFLOAT_X86_SIMD <= 52,
 #else // auto detect
 #if defined(__AVX2__)
 #define FASTFLOAT_X86_SIMD 52
-#elif defined(__AVX__) // On MSVC there's no way to check for SSE4.2 specifically so check __AVX__.
+#elif defined(__AVX__)
+// On MSVC there's no way to check for SSE4.2 specifically so check AVX.
 #define FASTFLOAT_X86_SIMD 50
 #elif defined(__SSE4_2__)
 #define FASTFLOAT_X86_SIMD 42
