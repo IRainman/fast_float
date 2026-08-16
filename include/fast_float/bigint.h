@@ -214,7 +214,7 @@ scalar_add(limb x, limb y, bool &overflow) noexcept {
 // gcc and clang
 #if defined(__has_builtin)
 #if __has_builtin(__builtin_add_overflow)
-  if (!cpp20_and_in_constexpr()) {
+  if (!is_constant_evaluated()) {
     overflow = __builtin_add_overflow(x, y, &z);
     return z;
   }

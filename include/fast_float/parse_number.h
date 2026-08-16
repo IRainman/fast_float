@@ -219,7 +219,7 @@ clinger_fast_path_impl(am_mant_t const mantissa, am_pow_t const exponent,
     // there might be performance advantages at having the check
     // be last.
 #ifndef FASTFLOAT_ONLY_ROUNDS_TO_NEAREST_SUPPORTED
-    if (!cpp20_and_in_constexpr() && detail::rounds_to_nearest()) {
+    if (!is_constant_evaluated() && detail::rounds_to_nearest()) {
 #endif
       // We have that fegetround() == FE_TONEAREST.
       // Next is Clinger's fast path.

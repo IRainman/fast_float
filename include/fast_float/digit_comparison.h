@@ -169,14 +169,15 @@ round_down(adjusted_mantissa &am, am_pow_t shift) noexcept {
 template <typename UC>
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 void
 skip_zeros(UC const *&first, UC const *last) noexcept {
-  while (!cpp20_and_in_constexpr() &&
-         std::distance(first, last) >= int_cmp_len<UC>()) {
-    uint64_t val;
-    ::memcpy(&val, first, sizeof(uint64_t));
-    if (val != int_cmp_zeros<UC>()) {
-      break;
+  if (!is_constant_evaluated()) {
+    while (std::distance(first, last) >= int_cmp_len<UC>()) {
+      uint64_t val;
+      ::memcpy(&val, first, sizeof(uint64_t));
+      if (val != int_cmp_zeros<UC>()) {
+        break;
+      }
+      first += int_cmp_len<UC>();
     }
-    first += int_cmp_len<UC>();
   }
   while (first != last) {
     if (*first != UC('0')) {
@@ -192,14 +193,15 @@ template <typename UC>
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 bool
 is_truncated(UC const *first, UC const *last) noexcept {
   // do 8-bit optimizations, can just compare to 8 literal 0s.
-  while (!cpp20_and_in_constexpr() &&
-         std::distance(first, last) >= int_cmp_len<UC>()) {
-    uint64_t val;
-    ::memcpy(&val, first, sizeof(uint64_t));
-    if (val != int_cmp_zeros<UC>()) {
-      return true;
+  if (!is_constant_evaluated()) {
+    while (std::distance(first, last) >= int_cmp_len<UC>()) {
+      uint64_t val;
+      ::memcpy(&val, first, sizeof(uint64_t));
+      if (val != int_cmp_zeros<UC>()) {
+        return true;
+      }
+      first += int_cmp_len<UC>();
     }
-    first += int_cmp_len<UC>();
   }
   while (first != last) {
     if (*first != UC('0')) {

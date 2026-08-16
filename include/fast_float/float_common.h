@@ -193,9 +193,8 @@ using parse_options = parse_options_t<char>;
 #endif
 
 #ifdef FASTFLOAT_X86_SIMD // user defined level
-static_assert(FASTFLOAT_X86_SIMD >= 20 && FASTFLOAT_X86_SIMD <= 52,
-              "FASTFLOAT_X86_SIMD should be between 20(SSE2) and 42(SSE4.2) "
-              "and optionally up to 52(AVX2)");
+static_assert(FASTFLOAT_X86_SIMD == 20 || FASTFLOAT_X86_SIMD == 42 || FASTFLOAT_X86_SIMD == 52,
+              "FASTFLOAT_X86_SIMD should be 20(SSE2), 42(SSE4.2) and 52(AVX2)");
 #else // auto detect
 #if defined(__AVX2__)
 #define FASTFLOAT_X86_SIMD 52
@@ -298,10 +297,7 @@ static_assert(FASTFLOAT_X86_SIMD >= 20 && FASTFLOAT_X86_SIMD <= 52,
 
 namespace fast_float {
 #if FASTFLOAT_HAS_BIT_CAST
-template <typename To, typename From>
-fastfloat_really_inline constexpr To bit_cast(const From &from) noexcept {
-  return std::bit_cast<To>(from);
-}
+using std::bit_cast;
 #else
 template <typename To, typename From>
 fastfloat_really_inline To bit_cast(const From &from) noexcept {
@@ -315,13 +311,13 @@ fastfloat_really_inline To bit_cast(const From &from) noexcept {
 }
 #endif
 
-fastfloat_really_inline constexpr bool cpp20_and_in_constexpr() noexcept {
 #if FASTFLOAT_HAS_IS_CONSTANT_EVALUATED
-  return std::is_constant_evaluated();
+using std::is_constant_evaluated;
 #else
+fastfloat_really_inline constexpr bool is_constant_evaluated() noexcept {
   return false;
-#endif
 }
+#endif
 
 template <typename T>
 struct is_supported_float_type
@@ -372,7 +368,7 @@ template <typename UC>
 inline FASTFLOAT_CONSTEXPR14 bool
 fastfloat_strncasecmp3(UC const *actual_mixedcase,
                        UC const *expected_lowercase) {
-  if (cpp20_and_in_constexpr()) {
+  if (is_constant_evaluated()) {
     for (uint_fast8_t i = 0; i != 3; ++i) {
       if ((actual_mixedcase[i] | 32) != expected_lowercase[i]) {
         return false;
@@ -415,7 +411,7 @@ template <typename UC>
 inline FASTFLOAT_CONSTEXPR14 bool
 fastfloat_strncasecmp5(UC const *actual_mixedcase,
                        UC const *expected_lowercase) {
-  if (cpp20_and_in_constexpr()) {
+  if (is_constant_evaluated()) {
     for (uint_fast8_t i = 0; i != 5; ++i) {
       if ((actual_mixedcase[i] | 32) != expected_lowercase[i]) {
         return false;
@@ -459,8 +455,6 @@ fastfloat_strncasecmp5(UC const *actual_mixedcase,
       return (actual_mixedcase[4] | 32) == (expected_lowercase[4]);
     }
   }
-  // crutch for older GCC and MinGW probably.
-  return false;
 }
 
 // Compares two ASCII strings in a case insensitive manner.
@@ -468,7 +462,7 @@ template <typename UC>
 inline FASTFLOAT_CONSTEXPR14 bool
 fastfloat_strncasecmp(UC const *actual_mixedcase, UC const *expected_lowercase,
                       uint_fast8_t const length) noexcept {
-  if (cpp20_and_in_constexpr()) {
+  if (is_constant_evaluated()) {
     for (uint_fast8_t i = 0; i != length; ++i) {
       if ((actual_mixedcase[i] | 32) != expected_lowercase[i]) {
         return false;
@@ -571,7 +565,7 @@ fastfloat_really_inline FASTFLOAT_CONSTEXPR20 limb_t
 leading_zeroes(uint64_t input_num) noexcept {
   assert(input_num > 0);
   FASTFLOAT_ASSUME(input_num > 0);
-  if (cpp20_and_in_constexpr()) {
+  if (is_constant_evaluated()) {
     return leading_zeroes_generic(input_num);
   }
 #ifdef FASTFLOAT_VISUAL_STUDIO
@@ -632,7 +626,7 @@ countr_zero_generic_32(uint32_t input_num) noexcept {
 /* count trailing zeroes for 32-bit integers */
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 limb_t
 countr_zero_32(uint32_t input_num) noexcept {
-  if (cpp20_and_in_constexpr()) {
+  if (is_constant_evaluated()) {
     return countr_zero_generic_32(input_num);
   }
 #ifdef FASTFLOAT_VISUAL_STUDIO
@@ -680,7 +674,7 @@ _umul128(uint64_t ab, uint64_t cd, uint64_t *hi) noexcept {
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 value128
 full_multiplication(uint64_t a, uint64_t b) noexcept {
   value128 answer;
-  if (cpp20_and_in_constexpr()) {
+  if (is_constant_evaluated()) {
     answer.low = umul128_generic(a, b, &answer.high);
   } else {
 #if defined(_M_ARM64) && !defined(__MINGW32__)

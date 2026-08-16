@@ -50,7 +50,7 @@ fastfloat_really_inline constexpr uint32_t byteswap(uint32_t val) noexcept {
 template <typename T, typename UC>
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 T
 read_chars_to_unsigned(UC const *chars) noexcept {
-  if (cpp20_and_in_constexpr() || !std::is_same<UC, char>::value) {
+  if (is_constant_evaluated() || !std::is_same<UC, char>::value) {
     T val = 0;
     for (uint_fast8_t i = 0; i != sizeof(T); ++i) {
       val |= T(uint8_t(*chars)) << (i * 8);
@@ -133,7 +133,7 @@ parse_eight_digits_unrolled(uint64_t val) noexcept {
 template <typename UC>
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 uint32_t
 parse_eight_digits_unrolled(UC const *chars) noexcept {
-  if (cpp20_and_in_constexpr() || !has_simd_opt<UC>()) {
+  if (is_constant_evaluated() || !has_simd_opt<UC>()) {
     return parse_eight_digits_unrolled(
         read_chars_to_unsigned<uint64_t>(chars)); // truncation okay
   }
@@ -405,7 +405,7 @@ x86_parse_digits_unchecked_until_19(char const *&p, char const *end,
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 bool
 simd_parse_if_eight_digits_unrolled(char16_t const *chars,
                                     uint64_t &i) noexcept {
-  if (cpp20_and_in_constexpr()) {
+  if (is_constant_evaluated()) {
     return false;
   }
 #ifdef FASTFLOAT_X86_SIMD
