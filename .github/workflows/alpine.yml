@@ -21,7 +21,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Install latest Alpine Linux for ${{ matrix.arch }}
-        uses: jirutka/setup-alpine@v3
+        uses: jirutka/setup-alpine@v2
         with:
           arch: ${{ matrix.arch }}
           branch: ${{ matrix.arch == 'riscv64' && 'edge' || 'latest-stable' }}
