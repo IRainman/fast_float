@@ -195,8 +195,9 @@ using parse_options = parse_options_t<char>;
 #endif
 
 #ifdef FASTFLOAT_X86_SIMD // user defined level
-static_assert(FASTFLOAT_X86_SIMD == 20 || FASTFLOAT_X86_SIMD == 42 || FASTFLOAT_X86_SIMD == 52,
-              "FASTFLOAT_X86_SIMD should be 20(SSE2), 42(SSE4.2) and 52(AVX2)");
+static_assert(FASTFLOAT_X86_SIMD == 20 ||
+    FASTFLOAT_X86_SIMD == 42 || FASTFLOAT_X86_SIMD == 52,
+    "FASTFLOAT_X86_SIMD should be 20(SSE2), 42(SSE4.2) and 52(AVX2)");
 #else // auto detect
 #if defined(__AVX2__)
 #define FASTFLOAT_X86_SIMD 52
@@ -302,7 +303,7 @@ namespace fast_float {
 #if FASTFLOAT_HAS_BIT_CAST
   using std::bit_cast;
 #else
-template <typename To, typename From, FASTFLOAT_ENABLE_IF(sizeof(To) == sizeof(From))>
+template <typename To, typename From>
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 To bit_cast(const From &from) {
   // Implementation of std::bit_cast for pre-C++20.
   auto to = To();
