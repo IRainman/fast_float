@@ -393,7 +393,7 @@ parse_digits_until_19(char const *&p, char const *pend, am_mant_t &mantissa) {
 #endif
 
 template <typename UC>
-fastfloat_really_inline constexpr void
+fastfloat_really_inline FASTFLOAT_CONSTEXPR20 void
 parse_digits_until_19(UC const *&p, UC const *pend,
                       am_mant_t &mantissa) noexcept {
   do {
@@ -841,7 +841,6 @@ parse_number_string(UC const *p, UC const *pend,
         answer.mantissa = 0;
         p = answer.integer.ptr;
         UC const *int_end = p + answer.integer.len();
-
         parse_digits_until_19(p, int_end, answer.mantissa);
         if (answer.mantissa >= minimal_nineteen_digit_integer) {
           // We have a big integers, so skip the fraction part completely.
@@ -851,7 +850,6 @@ parse_number_string(UC const *p, UC const *pend,
           p = answer.fraction.ptr;
           UC const *const frac_end = p + answer.fraction.len();
           parse_digits_until_19(p, frac_end, answer.mantissa);
-
           answer.exponent = am_pow_t(answer.fraction.ptr - p) + exp_number;
         }
         // We have now corrected both exponent and mantissa, to a truncated
