@@ -1,7 +1,9 @@
 #ifndef FASTFLOAT_FLOAT_COMMON_H
 #define FASTFLOAT_FLOAT_COMMON_H
 
+#ifndef FASTFLOAT_ONLY_ROUNDS_TO_NEAREST_SUPPORTED
 #include <cfloat>
+#endif
 #include <cstddef>
 #include <cstdint>
 #include <cassert>
@@ -296,14 +298,13 @@ static_assert(FASTFLOAT_X86_SIMD == 20 || FASTFLOAT_X86_SIMD == 42 || FASTFLOAT_
 #endif
 
 namespace fast_float {
+
 #if FASTFLOAT_HAS_BIT_CAST
-using std::bit_cast;
+  using std::bit_cast;
 #else
-template <typename To, typename From>
-fastfloat_really_inline To bit_cast(const From &from) noexcept {
+template <typename To, typename From, FASTFLOAT_ENABLE_IF(sizeof(To) == sizeof(From))>
+FASTFLOAT_CONSTEXPR20 auto bit_cast(const From &from) -> To {
   // Implementation of std::bit_cast for pre-C++20.
-  static_assert(sizeof(To) == sizeof(From),
-                "bit_cast requires source and destination to be the same size");
   auto to = To();
   // The cast suppresses a bogus -Wclass-memaccess on GCC.
   std::memcpy(static_cast<void *>(&to), &from, sizeof(to));
@@ -376,21 +377,20 @@ fastfloat_strncasecmp3(UC const *actual_mixedcase,
   } else {
     uint64_t val1{0}, val2{0};
     uint64_t mask{0};
-    FASTFLOAT_IF_CONSTEXPR17(sizeof(UC) == 1) { mask = 0x2020202020202020; }
-    else FASTFLOAT_IF_CONSTEXPR17(sizeof(UC) == 2) {
+    if FASTFLOAT_CONSTEXPR17 (sizeof(UC) == 1) {
+      mask = 0x2020202020202020;
+    } else if FASTFLOAT_CONSTEXPR17 (sizeof(UC) == 2) {
       mask = 0x0020002000200020;
-    }
-    else FASTFLOAT_IF_CONSTEXPR17(sizeof(UC) == 4) {
+    } else if FASTFLOAT_CONSTEXPR17 (sizeof(UC) == 4) {
       mask = 0x0000002000000020;
     }
-    FASTFLOAT_IF_CONSTEXPR17(sizeof(UC) == 1 || sizeof(UC) == 2) {
+    if FASTFLOAT_CONSTEXPR17 (sizeof(UC) == 1 || sizeof(UC) == 2) {
       ::memcpy(&val1, actual_mixedcase, 3 * sizeof(UC));
       ::memcpy(&val2, expected_lowercase, 3 * sizeof(UC));
       val1 |= mask;
       val2 |= mask;
       return val1 == val2;
-    }
-    else FASTFLOAT_IF_CONSTEXPR17(sizeof(UC) == 4) {
+    } else if FASTFLOAT_CONSTEXPR17 (sizeof(UC) == 4) {
       ::memcpy(&val1, actual_mixedcase, 2 * sizeof(UC));
       ::memcpy(&val2, expected_lowercase, 2 * sizeof(UC));
       val1 |= mask;
@@ -418,15 +418,14 @@ fastfloat_strncasecmp5(UC const *actual_mixedcase,
     return true;
   } else {
     uint64_t val1{0}, val2{0};
-    FASTFLOAT_IF_CONSTEXPR17(sizeof(UC) == 1) {
+    if FASTFLOAT_CONSTEXPR17 (sizeof(UC) == 1) {
       constexpr uint64_t mask = 0x2020202020202020;
       std::memcpy(&val1, actual_mixedcase, 5 * sizeof(UC));
       std::memcpy(&val2, expected_lowercase, 5 * sizeof(UC));
       val1 |= mask;
       val2 |= mask;
       return val1 == val2;
-    }
-    FASTFLOAT_IF_CONSTEXPR17(sizeof(UC) == 2) {
+    } else if FASTFLOAT_CONSTEXPR17 (sizeof(UC) == 2) {
       constexpr uint64_t mask = 0x0020002000200020;
       std::memcpy(&val1, actual_mixedcase, 4 * sizeof(UC));
       std::memcpy(&val2, expected_lowercase, 4 * sizeof(UC));
@@ -435,8 +434,7 @@ fastfloat_strncasecmp5(UC const *actual_mixedcase,
         return false;
       }
       return (actual_mixedcase[4] | 32) == (expected_lowercase[4]);
-    }
-    FASTFLOAT_IF_CONSTEXPR17(sizeof(UC) == 4) {
+    } else if FASTFLOAT_CONSTEXPR17 (sizeof(UC) == 4) {
       constexpr uint64_t mask = 0x0000002000000020;
       std::memcpy(&val1, actual_mixedcase, 2 * sizeof(UC));
       std::memcpy(&val2, expected_lowercase, 2 * sizeof(UC));
@@ -470,11 +468,11 @@ fastfloat_strncasecmp(UC const *actual_mixedcase, UC const *expected_lowercase,
   } else {
     uint64_t val1{0}, val2{0};
     uint64_t mask{0};
-    FASTFLOAT_IF_CONSTEXPR17(sizeof(UC) == 1) { mask = 0x2020202020202020; }
-    else FASTFLOAT_IF_CONSTEXPR17(sizeof(UC) == 2) {
+    if FASTFLOAT_CONSTEXPR17 (sizeof(UC) == 1) {
+      mask = 0x2020202020202020;
+    } else if FASTFLOAT_CONSTEXPR17 (sizeof(UC) == 2) {
       mask = 0x0020002000200020;
-    }
-    else FASTFLOAT_IF_CONSTEXPR17(sizeof(UC) == 4) {
+    } else if FASTFLOAT_CONSTEXPR17 (sizeof(UC) == 4) {
       mask = 0x0000002000000020;
     }
     uint_fast8_t sz = 8 / (sizeof(UC));
@@ -494,8 +492,10 @@ fastfloat_strncasecmp(UC const *actual_mixedcase, UC const *expected_lowercase,
 
 #endif
 
+#ifndef FASTFLOAT_ONLY_ROUNDS_TO_NEAREST_SUPPORTED
 #ifndef FLT_EVAL_METHOD
 #error "FLT_EVAL_METHOD should be defined, please include cfloat."
+#endif
 #endif
 
 // a pointer and a length to a contiguous block of memory

@@ -23,6 +23,7 @@
 * Improved the `parsed_number_string_t` layout and increased `constexpr`/`consteval` propagation to enable compile-time optimizations.
 * Reduced register and cache pressure and branching in parsing hot paths.
 * Improved performance in both 64-bit and 32-bit builds for all supported types.
+* Added more optimized x86 specific code that uses up to SSE4.2 instructions in algorithms and significantly improve speed parsing especially for big numbers.
 
 ---
 
@@ -38,16 +39,19 @@ Introduced new optional macros to minimize overhead when certain parsing feature
 
 * **`FASTFLOAT_ISNOT_CHECKED_BOUNDS`**
   Disables bounds checking for input ranges that are assumed to be valid.
-  Use only when inputs are guaranteed safe — this reduces branching and slightly improves performance.
+  This option is very usefull if you use library as **internal lightweight parser** — this reduces branching and improves performance.
 
 * **`FASTFLOAT_ASSUME`**
   Provides a portable abstraction for the compiler’s `[[assume]]` intrinsic.
 
 * **`FASTFLOAT_HAS_BYTESWAP`**
-  Uses std::byteswap if available to reduce code size and speed up.
+  Automatically uses std::byteswap if available to reduce code size and speed up.
 
 * **`FASTFLOAT_HAS_BIT_CAST`**
-  Uses std::bit_cast if available to reduce code size and speed up.
+  Automatically uses std::bit_cast if available to reduce code size and speed up.
+  
+* **`FASTFLOAT_X86_SIMD`**
+  Automatically uses reworking SSE parsing algorithms to improve performance on x86 machines.
 
 ---
 
@@ -65,7 +69,7 @@ Introduced new optional macros to minimize overhead when certain parsing feature
 * Fixed minor compiler warnings and addressed **PVS-Studio** static analysis feedback.
 * Properly use FASTFLOAT_SIMD_DISABLE_WARNINGS and FASTFLOAT_SIMD_RESTORE_WARNINGS only for instructions that allow unaligned loads.
 * Many small cleanups and fixes.
-* Added more comments about functionality and realization details.
+* Added many comments about functionality and realization details.
 
 ---
 
@@ -82,7 +86,7 @@ Smaller, [faster by default](https://github.com/fastfloat/fast_float/pull/307#is
 
 🔥 **Motivation:**
 There is a really common use case in mathematical and other abstract syntax tree (AST)-like parsers that already processes
-the sign and all other symbols before any number by itself. In this case you can use FastFloat to only parse positive numbers
+the sign and all other symbols before any number by itself. In this case you can use fastfloat to only parse positive numbers
 in all supported formats with macros `FASTFLOAT_ONLY_POSITIVE_C_NUMBER_WO_INF_NAN`, which significantly reduce the code size
 and improve performance. You also can use macros `FASTFLOAT_ISNOT_CHECKED_BOUNDS` if your code already checks bounds;
 it's very likely because all parsers need to check the first character by itself before parsing. Additionally, you can use

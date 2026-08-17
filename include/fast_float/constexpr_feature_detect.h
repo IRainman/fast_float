@@ -54,15 +54,15 @@
 
 // C++17 if constexpr
 #if defined(__cpp_if_constexpr) && __cpp_if_constexpr >= 201606L
-#define FASTFLOAT_IF_CONSTEXPR17(x) if constexpr (x)
+#define FASTFLOAT_CONSTEXPR17 constexpr
 #elif defined(__cpp_constexpr) && __cpp_constexpr >= 201603L
-#define FASTFLOAT_IF_CONSTEXPR17(x) if constexpr (x)
+#define FASTFLOAT_CONSTEXPR17 constexpr
 #elif __cplusplus >= 201703L
-#define FASTFLOAT_IF_CONSTEXPR17(x) if constexpr (x)
+#define FASTFLOAT_CONSTEXPR17 constexpr
 #elif defined(_MSC_VER) && _MSC_VER >= 1911 && _MSVC_LANG >= 201703L
-#define FASTFLOAT_IF_CONSTEXPR17(x) if constexpr (x)
+#define FASTFLOAT_CONSTEXPR17 constexpr
 #else
-#define FASTFLOAT_IF_CONSTEXPR17(x) if (x)
+#define FASTFLOAT_CONSTEXPR17
 #endif
 
 // C++17 inline variables
@@ -99,8 +99,10 @@
 #define FASTFLOAT_HAS_BUILTIN(x) false
 #endif
 
+#if defined(FASTFLOAT_ASSUME)
+// user provided solution
+#elif defined(__cpp_attrubute_assume)
 // For support attribute [[assume]] is declared in P1774
-#if defined(__cpp_attrubute_assume)
 #define FASTFLOAT_ASSUME(expr) [[assume(expr)]]
 #else
 #define FASTFLOAT_ASSUME(expr)
