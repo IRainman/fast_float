@@ -345,7 +345,7 @@ fastfloat_really_inline uint64_t x86_parse_16_digits(char const *p) noexcept {
   const __m128i data = _mm_loadu_si128(reinterpret_cast<const __m128i *>(p));
   const uint32_t lo = x86_parse_8_digits(data);
   const uint32_t hi = x86_parse_8_digits(_mm_srli_si128(data, 8));
-  return static_cast<uint64_t>(lo) * 100000000UL + static_cast<uint64_t>(hi);
+  return static_cast<uint64_t>(lo) * 100000000UL + hi;
 }
 
 #endif
@@ -365,8 +365,7 @@ parse_digits_until_19(char const *&p, char const *pend, am_mant_t &mantissa) {
      */
     if (std::distance(p, pend) >= 16 && mantissa < 100) {
       const uint64_t value = x86_parse_16_digits(p);
-      mantissa =
-          mantissa * 10000000000000000ULL + static_cast<am_mant_t>(value);
+      mantissa = mantissa * 10000000000000000ULL + value;
       p += 16;
     }
 #endif
@@ -379,7 +378,7 @@ parse_digits_until_19(char const *&p, char const *pend, am_mant_t &mantissa) {
      */
     while (std::distance(p, pend) >= 8 && mantissa < 10000000000ULL) {
       const uint32_t value = x86_parse_8_digits(p);
-      mantissa = mantissa * 100000000ULL + static_cast<am_mant_t>(value);
+      mantissa = mantissa * 100000000ULL + value;
       p += 8;
     }
     /*
@@ -477,7 +476,7 @@ loop_parse_if_digits(UC const *&p, UC const *const pend, uint64_t &i) {
     }
   }
   while ((p != pend) && is_integer(*p)) {
-    i = i * 10 + (*p - UC('0')); // may overflow, that's ok
+    i = i * 10 + static_cast<uint64_t>(*p - UC('0')); // may overflow, that's ok
     ++p;
   }
 }
