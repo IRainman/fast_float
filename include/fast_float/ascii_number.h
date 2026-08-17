@@ -134,7 +134,7 @@ uint64_t simd_read8_to_u64(UC const *) {
 }
 
 // credit  @aqrit
-fastfloat_really_inline constexpr uint32_t
+fastfloat_really_inline FASTFLOAT_CONSTEXPR14 uint32_t
 parse_eight_digits_unrolled(uint64_t val) noexcept {
   uint64_t const mask = 0x000000FF000000FF;
   uint64_t const mul1 = 0x000F424000000064; // 100 + (1000000ULL << 32)
@@ -353,9 +353,9 @@ x86_parse_16_digits(char const *p) noexcept {
 #endif
 
 // credit @hedgehoginthecpp
-fastfloat_really_inline void constexpr
+fastfloat_really_inline void FASTFLOAT_CONSTEXPR20
 parse_digits_until_19(char const *&p, char const *pend,
-                          am_mant_t &mantissa) noexcept {
+                          am_mant_t &mantissa) {
   if (is_constant_evaluated()) {
     do {
       mantissa = mantissa * 10 + static_cast<am_mant_t>(*p - '0');
@@ -836,8 +836,6 @@ parse_number_string(UC const *p, UC const *pend,
         answer.mantissa = 0;
         p = answer.integer.ptr;
         UC const *int_end = p + answer.integer.len();
-        constexpr am_mant_t minimal_nineteen_digit_integer{
-            1000000000000000000ULL};
 
         parse_digits_until_19(p, int_end, answer.mantissa);
         if (answer.mantissa >= minimal_nineteen_digit_integer) {
