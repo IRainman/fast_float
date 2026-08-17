@@ -119,6 +119,10 @@ using parse_options = parse_options_t<char>;
 
 } // namespace fast_float
 
+#if FASTFLOAT_HAS_BIT_CAST
+#include <bit>
+#endif
+
 #if (defined(__x86_64) || defined(__x86_64__) || defined(_M_X64) ||            \
      defined(__amd64) || defined(__aarch64__) || defined(_M_ARM64) ||          \
      defined(__MINGW64__) || defined(__s390x__) ||                             \
@@ -291,10 +295,6 @@ static_assert(FASTFLOAT_X86_SIMD == 20 || FASTFLOAT_X86_SIMD == 42 || FASTFLOAT_
 #define FASTFLOAT_ENABLE_IF(...)                                               \
   typename std::enable_if<(__VA_ARGS__), int>::type
 
-#if FASTFLOAT_HAS_BIT_CAST
-#include <bit>
-#endif
-
 namespace fast_float {
 #if FASTFLOAT_HAS_BIT_CAST
 using std::bit_cast;
@@ -362,8 +362,6 @@ struct is_supported_char_type
 
 #ifndef FASTFLOAT_ONLY_POSITIVE_C_NUMBER_WO_INF_NAN
 
-// TODO? use SSE4.2 there when SSE2 compiler switch in MSVC
-// or in other compiler SSE4.2 available?
 template <typename UC>
 inline FASTFLOAT_CONSTEXPR14 bool
 fastfloat_strncasecmp3(UC const *actual_mixedcase,
@@ -410,7 +408,7 @@ fastfloat_strncasecmp3(UC const *actual_mixedcase,
 template <typename UC>
 inline FASTFLOAT_CONSTEXPR14 bool
 fastfloat_strncasecmp5(UC const *actual_mixedcase,
-                       UC const *expected_lowercase) {
+                       UC const *expected_lowercase) noexcept {
   if (is_constant_evaluated()) {
     for (uint_fast8_t i = 0; i != 5; ++i) {
       if ((actual_mixedcase[i] | 32) != expected_lowercase[i]) {
@@ -493,6 +491,7 @@ fastfloat_strncasecmp(UC const *actual_mixedcase, UC const *expected_lowercase,
   }
   return true;
 }
+
 #endif
 
 #ifndef FLT_EVAL_METHOD
