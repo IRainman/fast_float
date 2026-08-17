@@ -449,6 +449,8 @@ fastfloat_strncasecmp5(UC const *actual_mixedcase,
         return false;
       }
       return (actual_mixedcase[4] | 32) == (expected_lowercase[4]);
+    } else {
+      return false;
     }
   }
 }
