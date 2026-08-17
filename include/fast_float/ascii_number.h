@@ -351,7 +351,7 @@ fastfloat_really_inline uint64_t x86_parse_16_digits(char const *p) noexcept {
 #endif
 
 // credit @hedgehoginthecpp
-fastfloat_really_inline void FASTFLOAT_CONSTEXPR20
+fastfloat_really_inline FASTFLOAT_CONSTEXPR20 void
 parse_digits_until_19(char const *&p, char const *pend, am_mant_t &mantissa) {
   if (is_constant_evaluated()) {
     do {
@@ -475,7 +475,7 @@ bool simd_parse_if_eight_digits_unrolled(UC const *, uint64_t &) {
 
 template <typename UC, FASTFLOAT_ENABLE_IF(!std::is_same<UC, char>::value) = 0>
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 void
-loop_parse_if_digits(UC const *&p, UC const *const pend, uint64_t &i) {
+loop_parse_if_digits(UC const *&p, UC const *const pend, uint64_t &i) noexcept {
   if (!is_constant_evaluated()) {
     if FASTFLOAT_CONSTEXPR17 (has_simd_opt<UC>()) {
       while (std::distance(p, pend) >= 8 /*sizeof(uint64_t)*/ &&
@@ -495,7 +495,8 @@ loop_parse_if_digits(UC const *&p, UC const *const pend, uint64_t &i) {
 }
 
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 void
-loop_parse_if_digits(char const *&p, char const *const pend, uint64_t &i) {
+loop_parse_if_digits(char const *&p, char const *const pend,
+                     uint64_t &i) noexcept {
 #if FASTFLOAT_X86_SIMD
   if (!is_constant_evaluated()) {
 #if FASTFLOAT_X86_SIMD >= 42
