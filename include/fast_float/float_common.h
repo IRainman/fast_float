@@ -303,7 +303,8 @@ namespace fast_float {
   using std::bit_cast;
 #else
 template <typename To, typename From, FASTFLOAT_ENABLE_IF(sizeof(To) == sizeof(From))>
-FASTFLOAT_CONSTEXPR20 auto bit_cast(const From &from) -> To {
+fastfloat_really_inline FASTFLOAT_CONSTEXPR20 auto bit_cast(const From &from)
+    -> To noexcept {
   // Implementation of std::bit_cast for pre-C++20.
   auto to = To();
   // The cast suppresses a bogus -Wclass-memaccess on GCC.
