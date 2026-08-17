@@ -1,9 +1,7 @@
 #ifndef FASTFLOAT_FLOAT_COMMON_H
 #define FASTFLOAT_FLOAT_COMMON_H
 
-#ifndef FASTFLOAT_ONLY_ROUNDS_TO_NEAREST_SUPPORTED
 #include <cfloat>
-#endif
 #include <cstddef>
 #include <cstdint>
 #include <cassert>
@@ -494,10 +492,8 @@ fastfloat_strncasecmp(UC const *actual_mixedcase, UC const *expected_lowercase,
 
 #endif
 
-#ifndef FASTFLOAT_ONLY_ROUNDS_TO_NEAREST_SUPPORTED
 #ifndef FLT_EVAL_METHOD
 #error "FLT_EVAL_METHOD should be defined, please include cfloat."
-#endif
 #endif
 
 // a pointer and a length to a contiguous block of memory
