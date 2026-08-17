@@ -393,7 +393,7 @@ parse_digits_until_19(char const *&p, char const *pend, am_mant_t &mantissa) {
 #endif
 
 template <typename UC>
-fastfloat_really_inline void constexpr parse_digits_until_19(
+fastfloat_really_inline constexpr void parse_digits_until_19(
     UC const *&p, UC const *pend, am_mant_t &mantissa) noexcept {
   do {
     mantissa = mantissa * 10 + static_cast<am_mant_t>(*p - UC('0'));
