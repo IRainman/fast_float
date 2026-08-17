@@ -2,10 +2,7 @@
 #define FASTFLOAT_ONLY_POSITIVE_C_NUMBER_WO_INF_NAN
 #define FASTFLOAT_ONLY_ROUNDS_TO_NEAREST_SUPPORTED
 #define FASTFLOAT_ISNOT_CHECKED_BOUNDS
-// #define FASTFLOAT_SSE_PATCH_REWORK // WIP, only for test!
-#ifdef FASTFLOAT_SSE_PATCH_REWORK
-#define FASTFLOAT_X86_SIMD 42
-#endif
+#define FASTFLOAT_X86_SIMD 42 // current maximum for test.
 
 #if defined(__linux__) || (__APPLE__ && __aarch64__)
 #define USING_COUNTERS

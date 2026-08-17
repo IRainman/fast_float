@@ -119,10 +119,6 @@ using parse_options = parse_options_t<char>;
 
 } // namespace fast_float
 
-#if FASTFLOAT_HAS_BIT_CAST
-#include <bit>
-#endif
-
 #if (defined(__x86_64) || defined(__x86_64__) || defined(_M_X64) ||            \
      defined(__amd64) || defined(__aarch64__) || defined(_M_ARM64) ||          \
      defined(__MINGW64__) || defined(__s390x__) ||                             \
@@ -294,6 +290,10 @@ static_assert(FASTFLOAT_X86_SIMD == 20 || FASTFLOAT_X86_SIMD == 42 || FASTFLOAT_
 
 #define FASTFLOAT_ENABLE_IF(...)                                               \
   typename std::enable_if<(__VA_ARGS__), int>::type
+
+#if FASTFLOAT_HAS_BIT_CAST
+#include <bit>
+#endif
 
 namespace fast_float {
 #if FASTFLOAT_HAS_BIT_CAST
