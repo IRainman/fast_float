@@ -713,6 +713,9 @@ struct adjusted_mantissa {
   }
 };
 
+// used by parse_digits_until_19
+constexpr am_mant_t minimal_nineteen_digit_integer{1000000000000000000ULL};
+
 // used for binary_format_lookup_tables<T>::max_mantissa
 constexpr am_mant_t constant_55555 = 5 * 5 * 5 * 5 * 5;
 

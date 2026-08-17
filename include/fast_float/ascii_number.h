@@ -134,7 +134,7 @@ uint64_t simd_read8_to_u64(UC const *) {
 }
 
 // credit  @aqrit
-fastfloat_really_inline FASTFLOAT_CONSTEXPR14 uint32_t
+fastfloat_really_inline constexpr uint32_t
 parse_eight_digits_unrolled(uint64_t val) noexcept {
   uint64_t const mask = 0x000000FF000000FF;
   uint64_t const mul1 = 0x000F424000000064; // 100 + (1000000ULL << 32)
@@ -300,7 +300,7 @@ x86_parse_8_digits(char const *p) noexcept {
 
 #if FASTFLOAT_X86_SIMD >= 42
 
-// hedgehoginthecpp_update
+// credit @hedgehoginthecpp
 fastfloat_really_inline bool x86_parse_if_16_digits(char const *chars,
                                                     uint64_t &value) noexcept {
   FASTFLOAT_SIMD_DISABLE_WARNINGS
@@ -341,9 +341,9 @@ fastfloat_really_inline bool x86_parse_if_16_digits(char const *chars,
   return true;
 }
 
+// credit @hedgehoginthecpp
 fastfloat_really_inline uint64_t
 x86_parse_16_digits(char const *p) noexcept {
-
   const __m128i data = _mm_loadu_si128(reinterpret_cast<const __m128i *>(p));
   const uint32_t lo = x86_parse_8_digits(data);
   const uint32_t hi = x86_parse_8_digits(_mm_srli_si128(data, 8));
@@ -352,45 +352,58 @@ x86_parse_16_digits(char const *p) noexcept {
 
 #endif
 
-// hedgehoginthecpp_update
-fastfloat_really_inline void
-x86_parse_digits_until_19(char const *&p, char const *pend,
+// credit @hedgehoginthecpp
+fastfloat_really_inline void constexpr
+parse_digits_until_19(char const *&p, char const *pend,
                           am_mant_t &mantissa) noexcept {
-  constexpr am_mant_t minimal_nineteen_digit_integer{1000000000000000000ULL};
+  if (is_constant_evaluated()) {
+    do {
+      mantissa = mantissa * 10 + static_cast<am_mant_t>(*p - '0');
+    } while ((++p != pend) && (mantissa < minimal_nineteen_digit_integer));
+  } else {
 #if FASTFLOAT_X86_SIMD >= 42
-  /*
-   * If mantissa has fewer than two digits, a complete
-   * 16-digit block cannot exceed 10^18 - 1.
-   */
-  if (std::distance(p, pend) >= 16 && mantissa < 100) {
-    const uint64_t value = x86_parse_16_digits(p);
-    mantissa = mantissa * 10000000000000000ULL +
-               static_cast<am_mant_t>(value);
-    p += 16;
-  }
+    /*
+     * If mantissa has fewer than two digits, a complete
+     * 16-digit block cannot exceed 10^18 - 1.
+     */
+    if (std::distance(p, pend) >= 16 && mantissa < 100) {
+      const uint64_t value = x86_parse_16_digits(p);
+      mantissa = mantissa * 10000000000000000ULL +
+                 static_cast<am_mant_t>(value);
+      p += 16;
+    }
 #endif
-  /*
-   * An 8-digit block is safe while:
-   *
-   *     mantissa < 10^10
-   *
-   * because the result is guaranteed < 10^18.
-   */
-  while (std::distance(p, pend) >= 8 && mantissa < 10000000000ULL) {
-    const uint32_t value = x86_parse_8_digits(p);
-    mantissa =
-        mantissa * 100000000ULL + static_cast<am_mant_t>(value);
-    p += 8;
-  }
-  /*
-   * finalizer
-   */
-  while (p != pend && mantissa < minimal_nineteen_digit_integer) {
-    mantissa = mantissa * 10 + static_cast<am_mant_t>(*p - '0');
-    ++p;
+    /*
+     * An 8-digit block is safe while:
+     *
+     *     mantissa < 10^10
+     *
+     * because the result is guaranteed < 10^18.
+     */
+    while (std::distance(p, pend) >= 8 && mantissa < 10000000000ULL) {
+      const uint32_t value = x86_parse_8_digits(p);
+      mantissa =
+          mantissa * 100000000ULL + static_cast<am_mant_t>(value);
+      p += 8;
+    }
+    /*
+     * finalizer
+     */
+    while (p != pend && mantissa < minimal_nineteen_digit_integer) {
+      mantissa = mantissa * 10 + static_cast<am_mant_t>(*p - '0');
+      ++p;
+    }
   }
 }
 #endif
+
+template <typename UC>
+fastfloat_really_inline void constexpr parse_digits_until_19(
+    UC const *&p, UC const *pend, am_mant_t &mantissa) noexcept {
+  do {
+    mantissa = mantissa * 10 + static_cast<am_mant_t>(*p - UC ('0'));
+  } while ((++p != pend) && (mantissa < minimal_nineteen_digit_integer));
+}
 
 // Call this if chars might not be 8 digits.
 // Using this style (instead of is_made_of_eight_digits_fast() then
@@ -458,40 +471,44 @@ bool simd_parse_if_eight_digits_unrolled(UC const *, uint64_t &) {
 template <typename UC, FASTFLOAT_ENABLE_IF(!std::is_same<UC, char>::value) = 0>
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 void
 loop_parse_if_digits(UC const *&p, UC const *const pend, uint64_t &i) {
-  if FASTFLOAT_CONSTEXPR17 (!has_simd_opt<UC>()) { return; }
-  while (std::distance(p, pend) >= 8 /*sizeof(uint64_t)*/ &&
-         simd_parse_if_eight_digits_unrolled(p, i)) { // may overflow, that's ok
-    p += 8 /*sizeof(uint64_t)*/;
+  if (!is_constant_evaluated()) {
+    if FASTFLOAT_CONSTEXPR17 (has_simd_opt<UC>()) {
+      while (std::distance(p, pend) >= 8 /*sizeof(uint64_t)*/ &&
+             simd_parse_if_eight_digits_unrolled(
+                 p, i)) { // may overflow, that's ok
+        p += 8 /*sizeof(uint64_t)*/;
+      }
+    }
+  }
+  while ((p != pend) && is_integer(*p)) {
+    i = i * 10 + (*p - UC('0')); // may overflow, that's ok
+    ++p;
   }
 }
 
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 void
 loop_parse_if_digits(char const *&p, char const *const pend, uint64_t &i) {
 #if FASTFLOAT_X86_SIMD
+  if (!is_constant_evaluated()) {
 #if FASTFLOAT_X86_SIMD >= 42
-  /*
-   * SSE4.2 handles 16 bytes at once.
-   *
-   * This is only used when a complete 16-byte block exists,
-   * so the load is always inside [p, pend).
-   */
-  while (std::distance(p, pend) >= 16) {
-    if (!x86_parse_if_16_digits(p, i)) {
-      break;
+    /*
+     * SSE4.2 handles 16 bytes at once.
+     *
+     * This is only used when a complete 16-byte block exists,
+     * so the load is always inside [p, pend).
+     */
+    while (std::distance(p, pend) >= 16 && x86_parse_if_16_digits(p, i)) {
+      p += 16;
     }
-    p += 16;
-  }
 #endif
-  /*
-   * 8-byte SIMD path.
-   */
-  while (std::distance(p, pend) >= 8 /*sizeof(uint64_t)*/) {
-    if (!x86_parse_if_8_digits(p, i)) {
-      break;
+    /*
+     * 8-byte SIMD path.
+     */
+    while (std::distance(p, pend) >= 8 && x86_parse_if_8_digits(p, i)) {
+      p += 8;
     }
-    p += 8;
-  }
-#else
+  } else
+#endif
   // optimizes better than parse_if_eight_digits_unrolled() for UC = char.
   while (std::distance(p, pend) >= 8 /*sizeof(uint64_t)*/) {
     auto const val = read_chars_to_unsigned<uint64_t>(p);
@@ -503,7 +520,6 @@ loop_parse_if_digits(char const *&p, char const *const pend, uint64_t &i) {
       break;
     }
   }
-#endif
   // Consume a remaining 4-7 digit run in a single SWAR step instead of
   // byte-by-byte (reuses the existing 4-digit helpers). The parsed result is
   // identical either way. Historically gated to clang because gcc regressed on
@@ -688,12 +704,6 @@ parse_number_string(UC const *p, UC const *pend,
     // for integers with many digits, digit parsing is the primary bottleneck.
     loop_parse_if_digits(p, pend, answer.mantissa);
 
-    while ((p != pend) && is_integer(*p)) {
-      answer.mantissa = static_cast<fast_float::am_mant_t>(
-          answer.mantissa * 10 +
-          static_cast<fast_float::am_mant_t>(*p - UC('0')));
-      ++p;
-    }
     answer.exponent = static_cast<am_pow_t>(before - p);
     if (store_spans) {
       answer.fraction =
@@ -828,42 +838,21 @@ parse_number_string(UC const *p, UC const *pend,
         UC const *int_end = p + answer.integer.len();
         constexpr am_mant_t minimal_nineteen_digit_integer{
             1000000000000000000ULL};
-#if FASTFLOAT_X86_SIMD
-        if FASTFLOAT_CONSTEXPR17 (std::is_same<UC, char>::value) {
-          x86_parse_digits_until_19(p, int_end, answer.mantissa);
-        } else
-#endif
-        {
-          do {
-            answer.mantissa =
-                answer.mantissa * 10 + static_cast<am_mant_t>(*p - UC('0'));
-          } while ((++p != int_end) &&
-                   (answer.mantissa < minimal_nineteen_digit_integer));
-        }
+
+        parse_digits_until_19(p, int_end, answer.mantissa);
         if (answer.mantissa >= minimal_nineteen_digit_integer) {
           // We have a big integers, so skip the fraction part completely.
           answer.exponent = am_pow_t(end_of_integer_part - p) + exp_number;
-        } else {
+        } else if (answer.fraction.len()) {
           // We have a value with a significant fractional component.
           p = answer.fraction.ptr;
           UC const *const frac_end = p + answer.fraction.len();
-#if FASTFLOAT_X86_SIMD
-          if FASTFLOAT_CONSTEXPR17 (std::is_same<UC, char>::value) {
-            x86_parse_digits_until_19(p, frac_end, answer.mantissa);
-          } else
-#endif
-          {
-            while ((p != frac_end) &&
-                   (answer.mantissa < minimal_nineteen_digit_integer)) {
-              answer.mantissa = static_cast<am_mant_t>(
-                  answer.mantissa * 10 + static_cast<am_mant_t>(*p - UC('0')));
-              ++p;
-            }
-            answer.exponent = am_pow_t(answer.fraction.ptr - p) + exp_number;
-          }
-          // We have now corrected both exponent and mantissa, to a truncated
-          // value
+          parse_digits_until_19(p, frac_end, answer.mantissa);
+
+          answer.exponent = am_pow_t(answer.fraction.ptr - p) + exp_number;
         }
+        // We have now corrected both exponent and mantissa, to a truncated
+        // value
       }
     }
   }
@@ -1040,8 +1029,7 @@ parse_int_string(UC const *p, UC const *pend, T &value,
   am_mant_t i = 0;
   if (options.base == 10) {
     loop_parse_if_digits(p, pend, i); // use SIMD if possible
-  }
-  while (p != pend) {
+  } else while (p != pend) {
     auto const digit = ch_to_digit(*p);
     if (digit >= options.base) {
       break;
