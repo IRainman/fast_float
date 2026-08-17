@@ -218,9 +218,11 @@ clinger_fast_path_impl(am_mant_t const mantissa, am_pow_t const exponent,
     // We could check it first (before the previous branch), but
     // there might be performance advantages at having the check
     // be last.
+    if (!is_constant_evaluated()
 #ifndef FASTFLOAT_ONLY_ROUNDS_TO_NEAREST_SUPPORTED
-    if (!is_constant_evaluated() && detail::rounds_to_nearest()) {
+        && detail::rounds_to_nearest()
 #endif
+        ) {
       // We have that fegetround() == FE_TONEAREST.
       // Next is Clinger's fast path.
       if (mantissa <= binary_format<T>::max_mantissa_fast_path()) {
@@ -237,7 +239,6 @@ clinger_fast_path_impl(am_mant_t const mantissa, am_pow_t const exponent,
 #endif
         return true;
       }
-#ifndef FASTFLOAT_ONLY_ROUNDS_TO_NEAREST_SUPPORTED
     } else {
       // We do not have that fegetround() == FE_TONEAREST.
       // Next is a modified Clinger's fast path, inspired by Jakub Jelínek's
@@ -264,7 +265,6 @@ clinger_fast_path_impl(am_mant_t const mantissa, am_pow_t const exponent,
         return true;
       }
     }
-#endif
   }
   return false;
 }
