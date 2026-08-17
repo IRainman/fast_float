@@ -21,10 +21,6 @@
 #endif // #ifndef FASTFLOAT_CONSTEXPR_TESTS
 #endif // FASTFLOAT_IS_CONSTEXPR
 
-#if FASTFLOAT_HAS_BIT_CAST
-#include <bit>
-#endif
-
 #ifndef SUPPLEMENTAL_TEST_DATA_DIR
 #define SUPPLEMENTAL_TEST_DATA_DIR "data/"
 #endif
@@ -969,7 +965,7 @@ constexpr void check_basic_test_result(stringtype str, result_type result,
 
   auto copysign = [](double x, double y) -> double {
 #if FASTFLOAT_HAS_BIT_CAST
-    if (fast_float::cpp20_and_in_constexpr()) {
+    if (fast_float::is_constant_evaluated()) {
       using equiv_int = std::make_signed_t<fast_float::equiv_uint_t<double>>;
       auto const i = std::bit_cast<equiv_int>(y);
       if (i < 0) {
