@@ -390,8 +390,16 @@ parse_digits_until_19(char const *&p, char const *pend, am_mant_t &mantissa) {
     }
   }
 }
-#endif
 
+template <typename UC, FASTFLOAT_ENABLE_IF(!std::is_same<UC, char>::value) = 0>
+fastfloat_really_inline FASTFLOAT_CONSTEXPR20 void
+parse_digits_until_19(UC const *&p, UC const *pend,
+                      am_mant_t &mantissa) noexcept {
+  do {
+    mantissa = mantissa * 10 + static_cast<am_mant_t>(*p - UC('0'));
+  } while ((++p != pend) && (mantissa < minimal_nineteen_digit_integer));
+}
+#else
 template <typename UC>
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 void
 parse_digits_until_19(UC const *&p, UC const *pend,
@@ -400,6 +408,7 @@ parse_digits_until_19(UC const *&p, UC const *pend,
     mantissa = mantissa * 10 + static_cast<am_mant_t>(*p - UC('0'));
   } while ((++p != pend) && (mantissa < minimal_nineteen_digit_integer));
 }
+#endif
 
 // Call this if chars might not be 8 digits.
 // Using this style (instead of is_made_of_eight_digits_fast() then
