@@ -382,7 +382,7 @@ parse_digits_until_19(char const *&p, char const *pend, am_mant_t &mantissa) {
       p += 8;
     }
     /*
-     * finalizer
+     * Finalizer
      */
     while (p != pend && mantissa < minimal_nineteen_digit_integer) {
       mantissa = mantissa * 10 + static_cast<am_mant_t>(*p - '0');
@@ -475,6 +475,9 @@ loop_parse_if_digits(UC const *&p, UC const *const pend, uint64_t &i) {
       }
     }
   }
+  /*
+   * Finalizer
+   */
   while ((p != pend) && is_integer(*p)) {
     i = i * 10 + static_cast<uint64_t>(*p - UC('0')); // may overflow, that's ok
     ++p;
@@ -527,6 +530,13 @@ loop_parse_if_digits(char const *&p, char const *const pend, uint64_t &i) {
           parse_four_digits_unrolled(val); // may overflow, that's ok
       p += sizeof(uint32_t);
     }
+  }
+  /*
+   * Finalizer
+   */
+  while ((p != pend) && is_integer(*p)) {
+    i = i * 10 + static_cast<uint64_t>(*p - '0'); // may overflow, that's ok
+    ++p;
   }
 }
 
