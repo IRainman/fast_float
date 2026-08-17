@@ -222,7 +222,7 @@ clinger_fast_path_impl(am_mant_t const mantissa, am_pow_t const exponent,
 #ifndef FASTFLOAT_ONLY_ROUNDS_TO_NEAREST_SUPPORTED
         && detail::rounds_to_nearest()
 #endif
-        ) {
+    ) {
       // We have that fegetround() == FE_TONEAREST.
       // Next is Clinger's fast path.
       if (mantissa <= binary_format<T>::max_mantissa_fast_path()) {

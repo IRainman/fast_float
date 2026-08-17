@@ -280,8 +280,7 @@ fastfloat_really_inline bool x86_parse_if_8_digits(char const *chars,
 }
 
 // credit @hedgehoginthecpp
-fastfloat_really_inline uint32_t
-x86_parse_8_digits(char const *p) noexcept {
+fastfloat_really_inline uint32_t x86_parse_8_digits(char const *p) noexcept {
 #if FASTFLOAT_X86_SIMD >= 31
   const __m128i data = _mm_loadl_epi64(reinterpret_cast<const __m128i *>(p));
   return x86_parse_8_digits(data);
@@ -342,8 +341,7 @@ fastfloat_really_inline bool x86_parse_if_16_digits(char const *chars,
 }
 
 // credit @hedgehoginthecpp
-fastfloat_really_inline uint64_t
-x86_parse_16_digits(char const *p) noexcept {
+fastfloat_really_inline uint64_t x86_parse_16_digits(char const *p) noexcept {
   const __m128i data = _mm_loadu_si128(reinterpret_cast<const __m128i *>(p));
   const uint32_t lo = x86_parse_8_digits(data);
   const uint32_t hi = x86_parse_8_digits(_mm_srli_si128(data, 8));
@@ -354,8 +352,7 @@ x86_parse_16_digits(char const *p) noexcept {
 
 // credit @hedgehoginthecpp
 fastfloat_really_inline void FASTFLOAT_CONSTEXPR20
-parse_digits_until_19(char const *&p, char const *pend,
-                          am_mant_t &mantissa) {
+parse_digits_until_19(char const *&p, char const *pend, am_mant_t &mantissa) {
   if (is_constant_evaluated()) {
     do {
       mantissa = mantissa * 10 + static_cast<am_mant_t>(*p - '0');
@@ -368,8 +365,8 @@ parse_digits_until_19(char const *&p, char const *pend,
      */
     if (std::distance(p, pend) >= 16 && mantissa < 100) {
       const uint64_t value = x86_parse_16_digits(p);
-      mantissa = mantissa * 10000000000000000ULL +
-                 static_cast<am_mant_t>(value);
+      mantissa =
+          mantissa * 10000000000000000ULL + static_cast<am_mant_t>(value);
       p += 16;
     }
 #endif
@@ -382,8 +379,7 @@ parse_digits_until_19(char const *&p, char const *pend,
      */
     while (std::distance(p, pend) >= 8 && mantissa < 10000000000ULL) {
       const uint32_t value = x86_parse_8_digits(p);
-      mantissa =
-          mantissa * 100000000ULL + static_cast<am_mant_t>(value);
+      mantissa = mantissa * 100000000ULL + static_cast<am_mant_t>(value);
       p += 8;
     }
     /*
@@ -401,7 +397,7 @@ template <typename UC>
 fastfloat_really_inline void constexpr parse_digits_until_19(
     UC const *&p, UC const *pend, am_mant_t &mantissa) noexcept {
   do {
-    mantissa = mantissa * 10 + static_cast<am_mant_t>(*p - UC ('0'));
+    mantissa = mantissa * 10 + static_cast<am_mant_t>(*p - UC('0'));
   } while ((++p != pend) && (mantissa < minimal_nineteen_digit_integer));
 }
 
@@ -509,17 +505,17 @@ loop_parse_if_digits(char const *&p, char const *const pend, uint64_t &i) {
     }
   } else
 #endif
-  // optimizes better than parse_if_eight_digits_unrolled() for UC = char.
-  while (std::distance(p, pend) >= 8 /*sizeof(uint64_t)*/) {
-    auto const val = read_chars_to_unsigned<uint64_t>(p);
-    if (is_made_of_eight_digits_fast(val)) {
-      i = i * 100000000 /*10 ^ sizeof(uint64_t)*/ +
-          parse_eight_digits_unrolled(val); // may overflow, that's ok
-      p += sizeof(uint64_t);
-    } else {
-      break;
+    // optimizes better than parse_if_eight_digits_unrolled() for UC = char.
+    while (std::distance(p, pend) >= 8 /*sizeof(uint64_t)*/) {
+      auto const val = read_chars_to_unsigned<uint64_t>(p);
+      if (is_made_of_eight_digits_fast(val)) {
+        i = i * 100000000 /*10 ^ sizeof(uint64_t)*/ +
+            parse_eight_digits_unrolled(val); // may overflow, that's ok
+        p += sizeof(uint64_t);
+      } else {
+        break;
+      }
     }
-  }
   // Consume a remaining 4-7 digit run in a single SWAR step instead of
   // byte-by-byte (reuses the existing 4-digit helpers). The parsed result is
   // identical either way. Historically gated to clang because gcc regressed on
@@ -620,8 +616,7 @@ parse_number_string(UC const *p, UC const *pend,
         return report_parse_error<UC>(answer, p,
                                       parse_error::missing_integer_after_sign);
       }
-    }
-    else {
+    } else {
       if (!is_integer(*p) && (*p != options.decimal_point)) {
         // a sign must be followed by an integer or the dot
         return report_parse_error<UC>(
@@ -921,7 +916,7 @@ parse_int_string(UC const *p, UC const *pend, T &value,
 #endif
 
     if FASTFLOAT_CONSTEXPR17 (std::is_same<T, std::uint8_t>::value &&
-                             sizeof(UC) == 1) {
+                              sizeof(UC) == 1) {
       uint32_t digits;
 
       if (len >= sizeof(uint32_t)) {
@@ -987,7 +982,7 @@ parse_int_string(UC const *p, UC const *pend, T &value,
     }
 
     if FASTFLOAT_CONSTEXPR17 (std::is_same<T, std::uint16_t>::value &&
-                             sizeof(UC) == 1) {
+                              sizeof(UC) == 1) {
       if (len >= sizeof(uint32_t)) {
         auto const digits = read_chars_to_unsigned<uint32_t>(p);
         if (is_made_of_four_digits_fast(digits)) {
@@ -1027,14 +1022,16 @@ parse_int_string(UC const *p, UC const *pend, T &value,
   am_mant_t i = 0;
   if (options.base == 10) {
     loop_parse_if_digits(p, pend, i); // use SIMD if possible
-  } else while (p != pend) {
-    auto const digit = ch_to_digit(*p);
-    if (digit >= options.base) {
-      break;
+  } else
+    while (p != pend) {
+      auto const digit = ch_to_digit(*p);
+      if (digit >= options.base) {
+        break;
+      }
+      i = am_mant_t(options.base) * i +
+          digit; // might overflow, check this later
+      ++p;
     }
-    i = am_mant_t(options.base) * i + digit; // might overflow, check this later
-    ++p;
-  }
 
   auto const digit_count = static_cast<am_digits>(p - start_digits);
 
