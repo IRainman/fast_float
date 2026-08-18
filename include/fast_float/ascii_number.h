@@ -185,27 +185,6 @@ parse_four_digits_unrolled(uint32_t val) noexcept {
 
 #if FASTFLOAT_X86_SIMD
 
-// credit @hedgehoginthecpp
-fastfloat_really_inline bool x86_all_8_digits(__m128i data) noexcept {
-  const __m128i zero = _mm_set1_epi8('0');
-  const __m128i nine = _mm_set1_epi8('9');
-
-  const __m128i below = _mm_cmplt_epi8(data, zero);
-  const __m128i above = _mm_cmpgt_epi8(data, nine);
-  const __m128i not_number = _mm_or_si128(below, above);
-#if FASTFLOAT_X86_SIMD >= 41
-  /*
-   * SSE4.1 PTEST.
-   *
-   * This is preferable to extracting a 16-bit mask when SSE4.1
-   * is available.
-   */
-  return _mm_testz_si128(not_number, not_number) != 0;
-#else
-  return _mm_movemask_epi8(not_number) == 0;
-#endif
-}
-
 #if FASTFLOAT_X86_SIMD >= 31
 // credit @hedgehoginthecpp
 fastfloat_really_inline __m128i x86_parse_4x4_digits(__m128i data) noexcept {
@@ -224,20 +203,24 @@ fastfloat_really_inline __m128i x86_parse_4x4_digits(__m128i data) noexcept {
 }
 #endif
 
-#ifdef FASTFLOAT_VISUAL_STUDIO
 // credit @hedgehoginthecpp
 fastfloat_really_inline uint64_t
 convert_4x4_to_16digits(__m128i data) noexcept {
   // 4. convert to 16-digit number
   // v[0] * 10^12 + v[1] * 10^8 + v[2] * 10^4 + v[3]
-  return static_cast<uint64_t>(data.m128i_u32[0]) * 1000000000000ULL +
-         static_cast<uint64_t>(data.m128i_u32[1]) * 100000000ULL +
-         static_cast<uint64_t>(data.m128i_u32[2]) * 10000ULL +
-         static_cast<uint64_t>(data.m128i_u32[3]);
+  const uint64_t lo = static_cast<uint32_t>(_mm_cvtsi128_si32(data));
+  const uint64_t hi =
+      static_cast<uint32_t>(_mm_cvtsi128_si32(_mm_srli_si128(data, 4)));
+  const uint64_t a = lo * 10000ULL + hi;
+  const uint64_t lo2 =
+      static_cast<uint32_t>(_mm_cvtsi128_si32(_mm_srli_si128(data, 8)));
+  const uint64_t hi2 =
+      static_cast<uint32_t>(_mm_cvtsi128_si32(_mm_srli_si128(data, 12)));
+  const uint64_t b = lo2 * 10000ULL + hi2;
+  return a * 100000000ULL + b;
 }
-#endif
 
-#if FASTFLOAT_X86_SIMD >= 42 && FASTFLOAT_VISUAL_STUDIO
+#if FASTFLOAT_X86_SIMD >= 42
 // credit @hedgehoginthecpp
 fastfloat_really_inline bool x86_parse_if_16_digits(char const *chars,
                                                     uint64_t &value) noexcept {
@@ -277,7 +260,7 @@ fastfloat_really_inline bool x86_parse_if_16_digits(char const *chars,
 }
 #endif
 
-#if FASTFLOAT_X86_SIMD >= 31 && FASTFLOAT_VISUAL_STUDIO
+#if FASTFLOAT_X86_SIMD >= 31
 // credit @hedgehoginthecpp
 fastfloat_really_inline uint64_t x86_parse_16_digits(char const *p) noexcept {
   const __m128i data = _mm_loadu_si128(reinterpret_cast<const __m128i *>(p));
@@ -288,14 +271,14 @@ fastfloat_really_inline uint64_t x86_parse_16_digits(char const *p) noexcept {
 // credit @hedgehoginthecpp
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 void
 parse_digits_until_19(char const *&p, char const *pend, am_mant_t &mantissa) {
-#if FASTFLOAT_X86_SIMD >= 31 && FASTFLOAT_VISUAL_STUDIO
+#if FASTFLOAT_X86_SIMD >= 31
   if (!is_constant_evaluated()) {
     /*
      * If mantissa has fewer than two digits, a complete
      * 16-digit block cannot exceed 10^18 - 1.
      */
-    if (std::distance(p, pend) >= 16 && mantissa < 100) {
-      const uint64_t value = x86_parse_16_digits(p);
+    while (std::distance(p, pend) >= 16 && mantissa < 100) {
+      auto const value = x86_parse_16_digits(p);
       mantissa = mantissa * 10000000000000000ULL + value;
       p += 16;
     }
@@ -304,13 +287,18 @@ parse_digits_until_19(char const *&p, char const *pend, am_mant_t &mantissa) {
   // An 8-digit block is safe while: mantissa < 10^10 because the result is
   // guaranteed < 10^18.
   while (std::distance(p, pend) >= 8 && mantissa < 10000000000ULL) {
-    const uint32_t value = parse_eight_digits_unrolled(p);
+    auto const value = parse_eight_digits_unrolled(p);
     mantissa = mantissa * 100000000ULL + value;
     p += 8;
   }
+  while (std::distance(p, pend) >= 4 && mantissa < 10000000000ULL) {
+    auto const value = read_chars_to_unsigned<uint32_t>(p);
+    mantissa = mantissa * 10000 + parse_four_digits_unrolled(value);
+    p += 4;
+  }
   // Finalizer
   while (p != pend && mantissa < minimal_nineteen_digit_integer) {
-    mantissa = mantissa * 10 + static_cast<am_mant_t>(*p - '0');
+    mantissa = mantissa * 10 + static_cast<uint8_t>(*p - '0');
     ++p;
   }
 }
@@ -320,7 +308,7 @@ fastfloat_really_inline FASTFLOAT_CONSTEXPR20 void
 parse_digits_until_19(UC const *&p, UC const *pend,
                       am_mant_t &mantissa) noexcept {
   do {
-    mantissa = mantissa * 10 + static_cast<am_mant_t>(*p - UC('0'));
+    mantissa = mantissa * 10 + static_cast<uint8_t>(*p - UC('0'));
   } while ((++p != pend) && (mantissa < minimal_nineteen_digit_integer));
 }
 #else
@@ -329,7 +317,7 @@ fastfloat_really_inline FASTFLOAT_CONSTEXPR20 void
 parse_digits_until_19(UC const *&p, UC const *pend,
                       am_mant_t &mantissa) noexcept {
   do {
-    mantissa = mantissa * 10 + static_cast<am_mant_t>(*p - UC('0'));
+    mantissa = mantissa * 10 + static_cast<uint8_t>(*p - UC('0'));
   } while ((++p != pend) && (mantissa < minimal_nineteen_digit_integer));
 }
 #endif
@@ -605,7 +593,7 @@ parse_number_string(UC const *p, UC const *pend,
 #endif
   UC const *const end_of_integer_part = p;
   auto digit_count = static_cast<am_digits>(end_of_integer_part - start_digits);
-  if (store_spans) {
+  if fastfloat_unlikely (store_spans) {
     answer.integer = span<UC const>(start_digits, digit_count);
   }
 #ifndef FASTFLOAT_ONLY_POSITIVE_C_NUMBER_WO_INF_NAN
@@ -632,7 +620,7 @@ parse_number_string(UC const *p, UC const *pend,
     loop_parse_if_digits(p, pend, answer.mantissa);
 
     answer.exponent = static_cast<am_pow_t>(before - p);
-    if (store_spans) {
+    if fastfloat_unlikely (store_spans) {
       answer.fraction =
           span<UC const>(before, static_cast<am_digits>(p - before));
     }
@@ -756,7 +744,7 @@ parse_number_string(UC const *p, UC const *pend,
       // store_spans is false we didn't materialize them, so just flag
       // too_many_digits; the caller re-parses with store_spans=true to obtain
       // the corrected mantissa/exponent before taking the slow path.
-      if (store_spans) {
+      if fastfloat_unlikely (store_spans) {
         // Let us start again, this time, avoiding overflows.
         // We don't need to call if is_integer, since we use the
         // pre-tokenized spans from above.
