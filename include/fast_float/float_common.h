@@ -384,14 +384,14 @@ fastfloat_strncasecmp3(UC const *actual_mixedcase,
       mask = 0x0000002000000020;
     }
     if FASTFLOAT_CONSTEXPR17 (sizeof(UC) == 1 || sizeof(UC) == 2) {
-      ::memcpy(&val1, actual_mixedcase, 3 * sizeof(UC));
-      ::memcpy(&val2, expected_lowercase, 3 * sizeof(UC));
+      std::memcpy(&val1, actual_mixedcase, 3 * sizeof(UC));
+      std::memcpy(&val2, expected_lowercase, 3 * sizeof(UC));
       val1 |= mask;
       val2 |= mask;
       return val1 == val2;
     } else if FASTFLOAT_CONSTEXPR17 (sizeof(UC) == 4) {
-      ::memcpy(&val1, actual_mixedcase, 2 * sizeof(UC));
-      ::memcpy(&val2, expected_lowercase, 2 * sizeof(UC));
+      std::memcpy(&val1, actual_mixedcase, 2 * sizeof(UC));
+      std::memcpy(&val2, expected_lowercase, 2 * sizeof(UC));
       val1 |= mask;
       if (val1 != val2) {
         return false;

@@ -172,7 +172,7 @@ skip_zeros(UC const *&first, UC const *last) noexcept {
   if (!is_constant_evaluated()) {
     while (std::distance(first, last) >= int_cmp_len<UC>()) {
       uint64_t val;
-      ::memcpy(&val, first, sizeof(uint64_t));
+      std::memcpy(&val, first, sizeof(uint64_t));
       if (val != int_cmp_zeros<UC>()) {
         break;
       }
@@ -196,7 +196,7 @@ is_truncated(UC const *first, UC const *last) noexcept {
   if (!is_constant_evaluated()) {
     while (std::distance(first, last) >= int_cmp_len<UC>()) {
       uint64_t val;
-      ::memcpy(&val, first, sizeof(uint64_t));
+      std::memcpy(&val, first, sizeof(uint64_t));
       if (val != int_cmp_zeros<UC>()) {
         return true;
       }
