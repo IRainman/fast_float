@@ -311,6 +311,15 @@ parse_digits_until_19(UC const *&p, UC const *pend,
     mantissa = mantissa * 10 + static_cast<uint8_t>(*p - UC('0'));
   } while ((++p != pend) && (mantissa < minimal_nineteen_digit_integer));
 }
+#else
+template <typename UC>
+fastfloat_really_inline FASTFLOAT_CONSTEXPR20 void
+parse_digits_until_19(UC const *&p, UC const *pend,
+                      am_mant_t &mantissa) noexcept {
+  do {
+    mantissa = mantissa * 10 + static_cast<uint8_t>(*p - UC('0'));
+  } while ((++p != pend) && (mantissa < minimal_nineteen_digit_integer));
+}
 #endif
 
 // Call this if chars might not be 8 digits.
