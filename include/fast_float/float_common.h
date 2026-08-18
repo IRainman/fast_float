@@ -193,7 +193,7 @@ using parse_options = parse_options_t<char>;
 static_assert(FASTFLOAT_X86_SIMD == 20 || FASTFLOAT_X86_SIMD == 42 ||
                   FASTFLOAT_X86_SIMD == 52,
               "FASTFLOAT_X86_SIMD should be 20(SSE2), 42(SSE4.2) and 52(AVX2)");
-#else // auto detect
+#else                     // auto detect
 #if defined(__AVX2__)
 #define FASTFLOAT_X86_SIMD 52
 #elif defined(__AVX__)
