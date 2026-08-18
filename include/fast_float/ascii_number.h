@@ -86,7 +86,20 @@ read_chars_to_unsigned(UC const *chars) noexcept {
 fastfloat_really_inline uint64_t simd_read8_to_u64(__m128i const data) {
   // _mm_packus_epi16 is SSE2, converts 8×u16 → 8×u8
   __m128i const packed = _mm_packus_epi16(data, data);
+
+#if FASTFLOAT_64BIT
+  return static_cast<uint64_t>(_mm_cvtsi128_si64(packed));
+#elif FASTFLOAT_VISUAL_STUDIO
+  // Visual Studio doesn't support _mm_cvtsi128_si64 on 32-bit targets, so we
+  // use the union trick. Let's compiler do it works well, because it is a POD
+  // type.
   return packed.m128i_u64[0];
+#else
+  uint64_t value;
+  // Visual Studio + older versions of GCC don't support _mm_storeu_si64
+  _mm_storel_epi64(reinterpret_cast<__m128i *>(&value), packed);
+  return value;
+#endif
 }
 
 fastfloat_really_inline uint64_t simd_read8_to_u64(char16_t const *chars) {
@@ -211,8 +224,10 @@ fastfloat_really_inline __m128i x86_parse_4x4_digits(__m128i data) noexcept {
 }
 #endif
 
+#ifdef FASTFLOAT_VISUAL_STUDIO
 // credit @hedgehoginthecpp
-fastfloat_really_inline uint64_t convert_4x4_to_16digits(__m128i data) noexcept {
+fastfloat_really_inline uint64_t
+convert_4x4_to_16digits(__m128i data) noexcept {
   // 4. convert to 16-digit number
   // v[0] * 10^12 + v[1] * 10^8 + v[2] * 10^4 + v[3]
   return static_cast<uint64_t>(data.m128i_u32[0]) * 1000000000000ULL +
@@ -220,8 +235,9 @@ fastfloat_really_inline uint64_t convert_4x4_to_16digits(__m128i data) noexcept 
          static_cast<uint64_t>(data.m128i_u32[2]) * 10000ULL +
          static_cast<uint64_t>(data.m128i_u32[3]);
 }
+#endif
 
-#if FASTFLOAT_X86_SIMD >= 42
+#if FASTFLOAT_X86_SIMD >= 42 && FASTFLOAT_VISUAL_STUDIO
 // credit @hedgehoginthecpp
 fastfloat_really_inline bool x86_parse_if_16_digits(char const *chars,
                                                     uint64_t &value) noexcept {
@@ -261,7 +277,7 @@ fastfloat_really_inline bool x86_parse_if_16_digits(char const *chars,
 }
 #endif
 
-#if FASTFLOAT_X86_SIMD >= 31
+#if FASTFLOAT_X86_SIMD >= 31 && FASTFLOAT_VISUAL_STUDIO
 // credit @hedgehoginthecpp
 fastfloat_really_inline uint64_t x86_parse_16_digits(char const *p) noexcept {
   const __m128i data = _mm_loadu_si128(reinterpret_cast<const __m128i *>(p));
@@ -272,7 +288,7 @@ fastfloat_really_inline uint64_t x86_parse_16_digits(char const *p) noexcept {
 // credit @hedgehoginthecpp
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 void
 parse_digits_until_19(char const *&p, char const *pend, am_mant_t &mantissa) {
-#if FASTFLOAT_X86_SIMD >= 31
+#if FASTFLOAT_X86_SIMD >= 31 && FASTFLOAT_VISUAL_STUDIO
   if (!is_constant_evaluated()) {
     /*
      * If mantissa has fewer than two digits, a complete
@@ -285,7 +301,8 @@ parse_digits_until_19(char const *&p, char const *pend, am_mant_t &mantissa) {
     }
   }
 #endif
-  // An 8-digit block is safe while: mantissa < 10^10 because the result is guaranteed < 10^18.
+  // An 8-digit block is safe while: mantissa < 10^10 because the result is
+  // guaranteed < 10^18.
   while (std::distance(p, pend) >= 8 && mantissa < 10000000000ULL) {
     const uint32_t value = parse_eight_digits_unrolled(p);
     mantissa = mantissa * 100000000ULL + value;
