@@ -147,11 +147,6 @@ using parse_options = parse_options_t<char>;
 #endif
 #endif
 
-#if ((defined(_WIN32) || defined(_WIN64)) && !defined(__clang__)) ||           \
-    (defined(_M_ARM64) && !defined(__MINGW32__))
-#include <intrin.h>
-#endif
-
 #if defined(_MSC_VER) && !defined(__clang__)
 #define FASTFLOAT_VISUAL_STUDIO 1
 #endif
@@ -192,6 +187,8 @@ using parse_options = parse_options_t<char>;
 #endif
 #endif
 
+#ifdef FASTFLOAT_HAS_SIMD // user defined
+#else
 #ifdef FASTFLOAT_X86_SIMD // user defined level
 static_assert(FASTFLOAT_X86_SIMD == 20 || FASTFLOAT_X86_SIMD == 42 ||
                   FASTFLOAT_X86_SIMD == 52,
@@ -225,19 +222,19 @@ static_assert(FASTFLOAT_X86_SIMD == 20 || FASTFLOAT_X86_SIMD == 42 ||
 #define FASTFLOAT_HAS_SIMD 1
 #endif
 
+#if FASTFLOAT_HAS_SIMD
 #if defined(__GNUC__)
 // disable -Wcast-align=strict (GCC only)
 #define FASTFLOAT_SIMD_DISABLE_WARNINGS                                        \
   _Pragma("GCC diagnostic push")                                               \
       _Pragma("GCC diagnostic ignored \"-Wcast-align\"")
-#else
-#define FASTFLOAT_SIMD_DISABLE_WARNINGS
-#endif
 
-#if defined(__GNUC__)
 #define FASTFLOAT_SIMD_RESTORE_WARNINGS _Pragma("GCC diagnostic pop")
 #else
+#define FASTFLOAT_SIMD_DISABLE_WARNINGS
 #define FASTFLOAT_SIMD_RESTORE_WARNINGS
+#endif
+#endif
 #endif
 
 #ifdef FASTFLOAT_VISUAL_STUDIO
