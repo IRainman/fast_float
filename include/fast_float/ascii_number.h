@@ -86,14 +86,7 @@ read_chars_to_unsigned(UC const *chars) noexcept {
 fastfloat_really_inline uint64_t simd_read8_to_u64(__m128i const data) {
   // _mm_packus_epi16 is SSE2, converts 8×u16 → 8×u8
   __m128i const packed = _mm_packus_epi16(data, data);
-#ifdef FASTFLOAT_64BIT
-  return static_cast<uint64_t>(_mm_cvtsi128_si64(packed));
-#else
-  uint64_t value;
-  // Visual Studio + older versions of GCC don't support _mm_storeu_si64
-  _mm_storel_epi64(reinterpret_cast<__m128i *>(&value), packed);
-  return value;
-#endif
+  return packed.m128i_u64[0];
 }
 
 fastfloat_really_inline uint64_t simd_read8_to_u64(char16_t const *chars) {
@@ -200,105 +193,35 @@ fastfloat_really_inline bool x86_all_8_digits(__m128i data) noexcept {
 #endif
 }
 
-// credit @hedgehoginthecpp
-fastfloat_really_inline uint32_t x86_parse_8_digits(__m128i data) noexcept {
 #if FASTFLOAT_X86_SIMD >= 31
-  /*
-   * Convert ASCII:
-   *
-   *   '0'..'9'
-   *
-   * into:
-   *
-   *   0..9
-   */
-  data = _mm_sub_epi8(data, _mm_set1_epi8('0'));
+// credit @hedgehoginthecpp
+fastfloat_really_inline __m128i x86_parse_4x4_digits(__m128i data) noexcept {
+  // 1. convert from ASCII '0' .. '9' to numbers 0 .. 9
+  const __m128i ascii0 = _mm_set1_epi8('0');
+  const __m128i t0 = _mm_subs_epu8(data, ascii0);
 
-  /*
-   * [d0 d1 d2 d3 d4 d5 d6 d7]
-   *
-   * PMADDUBSW:
-   *
-   * [10*d0+d1,
-   *  10*d2+d3,
-   *  10*d4+d5,
-   *  10*d6+d7]
-   */
-  const __m128i pair =
-      _mm_maddubs_epi16(data, _mm_setr_epi8(10, 1, 10, 1, 10, 1, 10, 1, 10, 1,
-                                            10, 1, 10, 1, 10, 1));
+  // 2. convert to 2-digit numbers
+  const __m128i mul_1_10 =
+      _mm_setr_epi8(10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1);
+  const __m128i t1 = _mm_maddubs_epi16(t0, mul_1_10);
 
-  /*
-   * PMADDWD:
-   *
-   * [12,34,56,78]
-   *
-   * ->
-   *
-   * [1234,5678]
-   */
-  const __m128i quad =
-      _mm_madd_epi16(pair, _mm_setr_epi16(100, 1, 100, 1, 100, 1, 100, 1));
-
-  alignas(16) uint32_t v[4];
-  _mm_store_si128(reinterpret_cast<__m128i *>(v), quad);
-
-  return v[0] * 10000u + v[1];
-#else
-  /*
-   * SSE2 fallback.
-   *
-   * SSE3 itself has no PMADDUBSW, therefore use the existing
-   * SWAR algorithm. This still avoids byte-at-a-time parsing.
-   */
-  uint64_t value;
-
-#if defined(FASTFLOAT_64BIT)
-  value = static_cast<uint64_t>(_mm_cvtsi128_si64(data));
-#else
-  _mm_storel_epi64(reinterpret_cast<__m128i *>(&value), data);
-#endif
-
-  return parse_eight_digits_unrolled(value);
-#endif
+  // 3. convert to 4-digit numbers
+  const __m128i mul_1_100 = _mm_setr_epi16(100, 1, 100, 1, 100, 1, 100, 1);
+  return _mm_madd_epi16(t1, mul_1_100);
 }
+#endif
 
 // credit @hedgehoginthecpp
-fastfloat_really_inline bool x86_parse_if_8_digits(char const *chars,
-                                                   uint64_t &value) noexcept {
-  FASTFLOAT_SIMD_DISABLE_WARNINGS
-  const __m128i data =
-      _mm_loadl_epi64(reinterpret_cast<__m128i const *>(chars));
-  FASTFLOAT_SIMD_RESTORE_WARNINGS
-  if (!x86_all_8_digits(data))
-    return false;
-
-  const uint32_t digits = x86_parse_8_digits(data);
-
-  value = value * 100000000UL + digits;
-  return true;
-}
-
-// credit @hedgehoginthecpp
-fastfloat_really_inline uint32_t x86_parse_8_digits(char const *p) noexcept {
-#if FASTFLOAT_X86_SIMD >= 31
-  const __m128i data = _mm_loadl_epi64(reinterpret_cast<const __m128i *>(p));
-  return x86_parse_8_digits(data);
-#else
-  /*
-   * SSE3/SSE2/32-bit:
-   *
-   * No PMADDUBSW, so use the existing SWAR
-   * implementation. The input is already known
-   * to contain digits.
-   */
-  const uint64_t raw = read_chars_to_unsigned<uint64_t>(p);
-  return parse_eight_digits_unrolled(raw);
-#endif
+fastfloat_really_inline uint64_t convert_4x4_to_16digits(__m128i data) noexcept {
+  // 4. convert to 16-digit number
+  // v[0] * 10^12 + v[1] * 10^8 + v[2] * 10^4 + v[3]
+  return static_cast<uint64_t>(data.m128i_u32[0]) * 1000000000000ULL +
+         static_cast<uint64_t>(data.m128i_u32[1]) * 100000000ULL +
+         static_cast<uint64_t>(data.m128i_u32[2]) * 10000ULL +
+         static_cast<uint64_t>(data.m128i_u32[3]);
 }
 
 #if FASTFLOAT_X86_SIMD >= 42
-
 // credit @hedgehoginthecpp
 fastfloat_really_inline bool x86_parse_if_16_digits(char const *chars,
                                                     uint64_t &value) noexcept {
@@ -331,34 +254,26 @@ fastfloat_really_inline bool x86_parse_if_16_digits(char const *chars,
   if (numbers != 16)
     return false;
 
-  const uint32_t lo = x86_parse_8_digits(data);
-  const uint32_t hi = x86_parse_8_digits(_mm_srli_si128(data, 8));
-
-  value = value * 10000000000000000UL +
-          static_cast<uint64_t>(lo) * 100000000UL + hi;
+  value = value * 10000000000000000ULL +
+          convert_4x4_to_16digits(x86_parse_4x4_digits(data));
 
   return true;
 }
+#endif
 
+#if FASTFLOAT_X86_SIMD >= 31
 // credit @hedgehoginthecpp
 fastfloat_really_inline uint64_t x86_parse_16_digits(char const *p) noexcept {
   const __m128i data = _mm_loadu_si128(reinterpret_cast<const __m128i *>(p));
-  const uint32_t lo = x86_parse_8_digits(data);
-  const uint32_t hi = x86_parse_8_digits(_mm_srli_si128(data, 8));
-  return static_cast<uint64_t>(lo) * 100000000UL + hi;
+  return convert_4x4_to_16digits(x86_parse_4x4_digits(data));
 }
-
 #endif
 
 // credit @hedgehoginthecpp
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 void
 parse_digits_until_19(char const *&p, char const *pend, am_mant_t &mantissa) {
-  if (is_constant_evaluated()) {
-    do {
-      mantissa = mantissa * 10 + static_cast<am_mant_t>(*p - '0');
-    } while ((++p != pend) && (mantissa < minimal_nineteen_digit_integer));
-  } else {
-#if FASTFLOAT_X86_SIMD >= 42
+#if FASTFLOAT_X86_SIMD >= 31
+  if (!is_constant_evaluated()) {
     /*
      * If mantissa has fewer than two digits, a complete
      * 16-digit block cannot exceed 10^18 - 1.
@@ -368,26 +283,18 @@ parse_digits_until_19(char const *&p, char const *pend, am_mant_t &mantissa) {
       mantissa = mantissa * 10000000000000000ULL + value;
       p += 16;
     }
+  }
 #endif
-    /*
-     * An 8-digit block is safe while:
-     *
-     *     mantissa < 10^10
-     *
-     * because the result is guaranteed < 10^18.
-     */
-    while (std::distance(p, pend) >= 8 && mantissa < 10000000000ULL) {
-      const uint32_t value = x86_parse_8_digits(p);
-      mantissa = mantissa * 100000000ULL + value;
-      p += 8;
-    }
-    /*
-     * Finalizer
-     */
-    while (p != pend && mantissa < minimal_nineteen_digit_integer) {
-      mantissa = mantissa * 10 + static_cast<am_mant_t>(*p - '0');
-      ++p;
-    }
+  // An 8-digit block is safe while: mantissa < 10^10 because the result is guaranteed < 10^18.
+  while (std::distance(p, pend) >= 8 && mantissa < 10000000000ULL) {
+    const uint32_t value = parse_eight_digits_unrolled(p);
+    mantissa = mantissa * 100000000ULL + value;
+    p += 8;
+  }
+  // Finalizer
+  while (p != pend && mantissa < minimal_nineteen_digit_integer) {
+    mantissa = mantissa * 10 + static_cast<am_mant_t>(*p - '0');
+    ++p;
   }
 }
 
@@ -485,9 +392,7 @@ loop_parse_if_digits(UC const *&p, UC const *const pend, uint64_t &i) noexcept {
       }
     }
   }
-  /*
-   * Finalizer
-   */
+  // Finalizer
   while ((p != pend) && is_integer(*p)) {
     i = i * 10 + static_cast<uint64_t>(*p - UC('0')); // may overflow, that's ok
     ++p;
@@ -497,9 +402,8 @@ loop_parse_if_digits(UC const *&p, UC const *const pend, uint64_t &i) noexcept {
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 void
 loop_parse_if_digits(char const *&p, char const *const pend,
                      uint64_t &i) noexcept {
-#if FASTFLOAT_X86_SIMD
-  if (!is_constant_evaluated()) {
 #if FASTFLOAT_X86_SIMD >= 42
+  if (!is_constant_evaluated()) {
     /*
      * SSE4.2 handles 16 bytes at once.
      *
@@ -509,26 +413,19 @@ loop_parse_if_digits(char const *&p, char const *const pend,
     while (std::distance(p, pend) >= 16 && x86_parse_if_16_digits(p, i)) {
       p += 16;
     }
+  }
 #endif
-    /*
-     * 8-byte SIMD path.
-     */
-    while (std::distance(p, pend) >= 8 && x86_parse_if_8_digits(p, i)) {
-      p += 8;
+  // optimizes better than parse_if_eight_digits_unrolled() for UC = char.
+  while (std::distance(p, pend) >= 8 /*sizeof(uint64_t)*/) {
+    auto const val = read_chars_to_unsigned<uint64_t>(p);
+    if (is_made_of_eight_digits_fast(val)) {
+      i = i * 100000000 /*10 ^ sizeof(uint64_t)*/ +
+          parse_eight_digits_unrolled(val); // may overflow, that's ok
+      p += sizeof(uint64_t);
+    } else {
+      break;
     }
-  } else
-#endif
-    // optimizes better than parse_if_eight_digits_unrolled() for UC = char.
-    while (std::distance(p, pend) >= 8 /*sizeof(uint64_t)*/) {
-      auto const val = read_chars_to_unsigned<uint64_t>(p);
-      if (is_made_of_eight_digits_fast(val)) {
-        i = i * 100000000 /*10 ^ sizeof(uint64_t)*/ +
-            parse_eight_digits_unrolled(val); // may overflow, that's ok
-        p += sizeof(uint64_t);
-      } else {
-        break;
-      }
-    }
+  }
   // Consume a remaining 4-7 digit run in a single SWAR step instead of
   // byte-by-byte (reuses the existing 4-digit helpers). The parsed result is
   // identical either way. Historically gated to clang because gcc regressed on
@@ -542,9 +439,7 @@ loop_parse_if_digits(char const *&p, char const *const pend,
       p += sizeof(uint32_t);
     }
   }
-  /*
-   * Finalizer
-   */
+  // Finalizer
   while ((p != pend) && is_integer(*p)) {
     i = i * 10 + static_cast<uint64_t>(*p - '0'); // may overflow, that's ok
     ++p;
