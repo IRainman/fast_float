@@ -187,7 +187,7 @@ using parse_options = parse_options_t<char>;
 #endif
 #endif
 
-#ifdef FASTFLOAT_HAS_SIMD // user defined
+#ifdef FASTFLOAT_USE_SIMD // user defined
 #else
 #ifdef FASTFLOAT_X86_SIMD // user defined level
 static_assert(FASTFLOAT_X86_SIMD == 20 || FASTFLOAT_X86_SIMD == 42 ||
@@ -219,10 +219,10 @@ static_assert(FASTFLOAT_X86_SIMD == 20 || FASTFLOAT_X86_SIMD == 42 ||
 #endif
 
 #if defined(FASTFLOAT_X86_SIMD) || defined(FASTFLOAT_ARM_NEON)
-#define FASTFLOAT_HAS_SIMD 1
+#define FASTFLOAT_USE_SIMD 1
 #endif
 
-#if FASTFLOAT_HAS_SIMD
+#if FASTFLOAT_USE_SIMD
 #if defined(__GNUC__)
 // disable -Wcast-align=strict (GCC only)
 #define FASTFLOAT_SIMD_DISABLE_WARNINGS                                        \

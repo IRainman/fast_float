@@ -52,6 +52,9 @@ Introduced new optional macros to minimize overhead when certain parsing feature
   
 * **`FASTFLOAT_X86_SIMD`**
   Automatically uses reworking SSE parsing algorithms to improve performance on x86 machines.
+  
+* **`FASTFLOAT_USE_SIMD`**
+  Add possibility to completely disable manual algorithms realization and give compiler more freedom
 
 ---
 

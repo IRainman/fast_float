@@ -20,7 +20,7 @@ namespace fast_float {
 
 template <typename UC>
 fastfloat_really_inline constexpr bool has_simd_opt() noexcept {
-#ifdef FASTFLOAT_HAS_SIMD
+#ifdef FASTFLOAT_USE_SIMD
   return std::is_same<UC, char16_t>::value;
 #else
   return false;
@@ -79,7 +79,7 @@ read_chars_to_unsigned(UC const *chars) noexcept {
   return val;
 }
 
-#if FASTFLOAT_HAS_SIMD
+#if FASTFLOAT_USE_SIMD
 
 #if FASTFLOAT_X86_SIMD
 
@@ -181,7 +181,7 @@ parse_four_digits_unrolled(uint32_t val) noexcept {
   return (((val & 0x00FF00FF) * 0x00640001) >> 16) & 0xFFFF;
 }
 
-#if FASTFLOAT_HAS_SIMD
+#if FASTFLOAT_USE_SIMD
 
 #if FASTFLOAT_X86_SIMD
 
@@ -415,7 +415,7 @@ loop_parse_if_digits(UC const *&p, UC const *const pend, uint64_t &i) noexcept {
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 void
 loop_parse_if_digits(char const *&p, char const *const pend,
                      uint64_t &i) noexcept {
-#if FASTFLOAT_X86_SIMD >= 42 && FASTFLOAT_HAS_SIMD
+#if FASTFLOAT_X86_SIMD >= 42 && FASTFLOAT_USE_SIMD
   if (!is_constant_evaluated()) {
     /*
      * SSE4.2 handles 16 bytes at once.
