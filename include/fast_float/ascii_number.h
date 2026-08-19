@@ -387,7 +387,7 @@ template <typename UC>
 template <typename UC, FASTFLOAT_ENABLE_IF(!has_simd_opt<UC>()) = 0>
 #endif
 // dummy for compiler
-bool simd_parse_if_8_digits_unrolled(UC const *, uint64_t &) {
+bool simd_parse_if_8_digits(UC const *, uint64_t &) {
   return false;
 }
 
@@ -397,7 +397,7 @@ loop_parse_if_digits(UC const *&p, UC const *const pend, uint64_t &i) noexcept {
   if (!is_constant_evaluated()) {
     if FASTFLOAT_CONSTEXPR17 (has_simd_opt<UC>()) {
       while (std::distance(p, pend) >= 8 &&
-             simd_parse_if_8_digits_unrolled(p, i)) { // may overflow, that's ok
+             simd_parse_if_8_digits(p, i)) { // may overflow, that's ok
         p += 8;
       }
     }
