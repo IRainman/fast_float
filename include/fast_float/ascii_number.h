@@ -83,7 +83,7 @@ read_chars_to_unsigned(UC const *chars) noexcept {
 
 #if FASTFLOAT_X86_SIMD
 
-fastfloat_really_inline uint64_t simd_read8_to_u64(__m128i const data) {
+fastfloat_really_inline uint64_t simd_read8(__m128i const data) {
   // _mm_packus_epi16 is SSE2, converts 8×u16 → 8×u8
   __m128i const packed = _mm_packus_epi16(data, data);
 
@@ -102,25 +102,23 @@ fastfloat_really_inline uint64_t simd_read8_to_u64(__m128i const data) {
 #endif
 }
 
-fastfloat_really_inline uint64_t simd_read8_to_u64(char16_t const *chars) {
+fastfloat_really_inline uint64_t simd_read8(char16_t const *chars) {
   FASTFLOAT_SIMD_DISABLE_WARNINGS
   // unaligned SIMD instruction -> all fine.
-  return simd_read8_to_u64(
-      _mm_loadu_si128(reinterpret_cast<__m128i const *>(chars))); //-V1032
+  return simd_read8(_mm_loadu_si128(reinterpret_cast<__m128i const *>(chars)));
   FASTFLOAT_SIMD_RESTORE_WARNINGS
 }
 
 #elif defined(FASTFLOAT_ARM_NEON)
 
-fastfloat_really_inline uint64_t simd_read8_to_u64(uint16x8_t const &data) {
+fastfloat_really_inline uint64_t simd_read8(uint16x8_t const &data) {
   uint8x8_t utf8_packed = vmovn_u16(data);
   return vget_lane_u64(vreinterpret_u64_u8(utf8_packed), 0);
 }
 
-fastfloat_really_inline uint64_t simd_read8_to_u64(char16_t const *chars) {
+fastfloat_really_inline uint64_t simd_read8(char16_t const *chars) {
   FASTFLOAT_SIMD_DISABLE_WARNINGS
-  return simd_read8_to_u64(
-      vld1q_u16(reinterpret_cast<uint16_t const *>(chars)));
+  return simd_read8(vld1q_u16(reinterpret_cast<uint16_t const *>(chars)));
   FASTFLOAT_SIMD_RESTORE_WARNINGS
 }
 
@@ -135,13 +133,13 @@ template <typename UC>
 template <typename UC, FASTFLOAT_ENABLE_IF(!has_simd_opt<UC>()) = 0>
 #endif
 // dummy for compile
-uint64_t simd_read8_to_u64(UC const *) {
+uint64_t simd_read8(UC const *) {
   return 0;
 }
 
 // credit  @aqrit
 fastfloat_really_inline FASTFLOAT_CONSTEXPR14 uint32_t
-parse_eight_digits_unrolled(uint64_t val) noexcept {
+parse_8_digits(uint64_t val) noexcept {
   uint64_t const mask = 0x000000FF000000FF;
   uint64_t const mul1 = 0x000F424000000064; // 100 + (1000000ULL << 32)
   uint64_t const mul2 = 0x0000271000000001; // 1 + (10000ULL << 32)
@@ -154,28 +152,28 @@ parse_eight_digits_unrolled(uint64_t val) noexcept {
 // Call this if chars are definitely 8 digits.
 template <typename UC>
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 uint32_t
-parse_eight_digits_unrolled(UC const *chars) noexcept {
+parse_8_digits(UC const *chars) noexcept {
   if (is_constant_evaluated() || !has_simd_opt<UC>()) {
-    return parse_eight_digits_unrolled(
+    return parse_8_digits(
         read_chars_to_unsigned<uint64_t>(chars)); // truncation okay
   }
-  return parse_eight_digits_unrolled(simd_read8_to_u64(chars));
+  return parse_8_digits(simd_read8(chars));
 }
 
 // credit @aqrit
 fastfloat_really_inline constexpr bool
-is_made_of_eight_digits_fast(uint64_t val) noexcept {
+is_made_of_8_digits(uint64_t val) noexcept {
   return !((((val + 0x4646464646464646) | (val - 0x3030303030303030)) &
             0x8080808080808080));
 }
 
 fastfloat_really_inline constexpr bool
-is_made_of_four_digits_fast(uint32_t val) noexcept {
+is_made_of_4_digits(uint32_t val) noexcept {
   return !((((val + 0x46464646) | (val - 0x30303030)) & 0x80808080));
 }
 
 fastfloat_really_inline FASTFLOAT_CONSTEXPR14 uint32_t
-parse_four_digits_unrolled(uint32_t val) noexcept {
+parse_4_digits(uint32_t val) noexcept {
   val -= 0x30303030;
   val = (val * 10) + (val >> 8);
   return (((val & 0x00FF00FF) * 0x00640001) >> 16) & 0xFFFF;
@@ -187,7 +185,7 @@ parse_four_digits_unrolled(uint32_t val) noexcept {
 
 #if FASTFLOAT_X86_SIMD >= 31
 // credit @hedgehoginthecpp
-fastfloat_really_inline __m128i x86_parse_4x4_digits(__m128i data) noexcept {
+fastfloat_really_inline __m128i parse_4x4_digits(__m128i data) noexcept {
   // 1. convert from ASCII '0' .. '9' to numbers 0 .. 9
   const __m128i ascii0 = _mm_set1_epi8('0');
   const __m128i t0 = _mm_subs_epu8(data, ascii0);
@@ -205,7 +203,7 @@ fastfloat_really_inline __m128i x86_parse_4x4_digits(__m128i data) noexcept {
 
 // credit @hedgehoginthecpp
 fastfloat_really_inline uint64_t
-convert_4x4_to_16digits(__m128i data) noexcept {
+convert_4x4_to_16_digits(__m128i data) noexcept {
   // 4. convert to 16-digit number
   // v[0] * 10^12 + v[1] * 10^8 + v[2] * 10^4 + v[3]
   const uint64_t lo = static_cast<uint32_t>(_mm_cvtsi128_si32(data));
@@ -222,8 +220,8 @@ convert_4x4_to_16digits(__m128i data) noexcept {
 
 #if FASTFLOAT_X86_SIMD >= 42
 // credit @hedgehoginthecpp
-fastfloat_really_inline bool x86_parse_if_16_digits(char const *chars,
-                                                    uint64_t &value) noexcept {
+fastfloat_really_inline bool parse_if_16_digits(char const *chars,
+                                                uint64_t &value) noexcept {
   FASTFLOAT_SIMD_DISABLE_WARNINGS
   const __m128i data =
       _mm_loadu_si128(reinterpret_cast<__m128i const *>(chars));
@@ -254,7 +252,7 @@ fastfloat_really_inline bool x86_parse_if_16_digits(char const *chars,
     return false;
 
   value = value * 10000000000000000ULL +
-          convert_4x4_to_16digits(x86_parse_4x4_digits(data));
+          convert_4x4_to_16_digits(parse_4x4_digits(data));
 
   return true;
 }
@@ -262,9 +260,9 @@ fastfloat_really_inline bool x86_parse_if_16_digits(char const *chars,
 
 #if FASTFLOAT_X86_SIMD >= 31
 // credit @hedgehoginthecpp
-fastfloat_really_inline uint64_t x86_parse_16_digits(char const *p) noexcept {
+fastfloat_really_inline uint64_t parse_16_digits(char const *p) noexcept {
   const __m128i data = _mm_loadu_si128(reinterpret_cast<const __m128i *>(p));
-  return convert_4x4_to_16digits(x86_parse_4x4_digits(data));
+  return convert_4x4_to_16_digits(parse_4x4_digits(data));
 }
 #endif
 
@@ -278,7 +276,7 @@ parse_digits_until_19(char const *&p, char const *pend, am_mant_t &mantissa) {
      * 16-digit block cannot exceed 10^18 - 1.
      */
     while (std::distance(p, pend) >= 16 && mantissa < 100) {
-      auto const value = x86_parse_16_digits(p);
+      auto const value = parse_16_digits(p);
       mantissa = mantissa * 10000000000000000ULL + value;
       p += 16;
     }
@@ -287,13 +285,14 @@ parse_digits_until_19(char const *&p, char const *pend, am_mant_t &mantissa) {
   // An 8-digit block is safe while: mantissa < 10^10 because the result is
   // guaranteed < 10^18.
   while (std::distance(p, pend) >= 8 && mantissa < 10000000000ULL) {
-    auto const value = parse_eight_digits_unrolled(p);
+    auto const value = parse_8_digits(p);
     mantissa = mantissa * 100000000ULL + value;
     p += 8;
   }
+  // ?????
   while (std::distance(p, pend) >= 4 && mantissa < 10000000000ULL) {
     auto const value = read_chars_to_unsigned<uint32_t>(p);
-    mantissa = mantissa * 10000 + parse_four_digits_unrolled(value);
+    mantissa = mantissa * 10000 + parse_4_digits(value);
     p += 4;
   }
   // Finalizer
@@ -323,11 +322,10 @@ parse_digits_until_19(UC const *&p, UC const *pend,
 #endif
 
 // Call this if chars might not be 8 digits.
-// Using this style (instead of is_made_of_eight_digits_fast() then
-// parse_eight_digits_unrolled()) ensures we don't load SIMD registers twice.
+// Using this style (instead of is_made_of_8_digits() then
+// parse_8_digits()) ensures we don't load SIMD registers twice.
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 bool
-simd_parse_if_eight_digits_unrolled(char16_t const *chars,
-                                    uint64_t &i) noexcept {
+simd_parse_if_8_digits(char16_t const *chars, uint64_t &i) noexcept {
   if (is_constant_evaluated()) {
     return false;
   }
@@ -336,7 +334,7 @@ simd_parse_if_eight_digits_unrolled(char16_t const *chars,
   // Load 8 UTF-16 characters (16 bytes)
   // unaligned SIMD instruction -> all fine.
   __m128i const data =
-      _mm_loadu_si128(reinterpret_cast<__m128i const *>(chars)); //-V1032
+      _mm_loadu_si128(reinterpret_cast<__m128i const *>(chars));
   FASTFLOAT_SIMD_RESTORE_WARNINGS
 
   // Branchless "are all digits?" trick from Lemire:
@@ -348,7 +346,7 @@ simd_parse_if_eight_digits_unrolled(char16_t const *chars,
 
   // If mask == 0 → all digits valid.
   if (_mm_movemask_epi8(mask) == 0) {
-    i = i * 100000000 + parse_eight_digits_unrolled(simd_read8_to_u64(data));
+    i = i * 100000000 + parse_8_digits(simd_read8(data));
     return true;
   }
 #elif FASTFLOAT_ARM_NEON
@@ -362,7 +360,7 @@ simd_parse_if_eight_digits_unrolled(char16_t const *chars,
   uint16x8_t const mask = vcltq_u16(t0, vmovq_n_u16('9' - '0' + 1));
 
   if (vminvq_u16(mask) == 0xFFFF) {
-    i = i * 100000000 + parse_eight_digits_unrolled(simd_read8_to_u64(data));
+    i = i * 100000000 + parse_8_digits(simd_read8(data));
     return true;
   }
 #else
@@ -388,9 +386,9 @@ template <typename UC>
 #else
 template <typename UC, FASTFLOAT_ENABLE_IF(!has_simd_opt<UC>()) = 0>
 #endif
-// dummy for compile
-bool simd_parse_if_eight_digits_unrolled(UC const *, uint64_t &) {
-  return 0;
+// dummy for compiler
+bool simd_parse_if_8_digits_unrolled(UC const *, uint64_t &) {
+  return false;
 }
 
 template <typename UC, FASTFLOAT_ENABLE_IF(!std::is_same<UC, char>::value) = 0>
@@ -398,10 +396,9 @@ fastfloat_really_inline FASTFLOAT_CONSTEXPR20 void
 loop_parse_if_digits(UC const *&p, UC const *const pend, uint64_t &i) noexcept {
   if (!is_constant_evaluated()) {
     if FASTFLOAT_CONSTEXPR17 (has_simd_opt<UC>()) {
-      while (std::distance(p, pend) >= 8 /*sizeof(uint64_t)*/ &&
-             simd_parse_if_eight_digits_unrolled(
-                 p, i)) { // may overflow, that's ok
-        p += 8 /*sizeof(uint64_t)*/;
+      while (std::distance(p, pend) >= 8 &&
+             simd_parse_if_8_digits_unrolled(p, i)) { // may overflow, that's ok
+        p += 8;
       }
     }
   }
@@ -423,7 +420,7 @@ loop_parse_if_digits(char const *&p, char const *const pend,
      * This is only used when a complete 16-byte block exists,
      * so the load is always inside [p, pend).
      */
-    while (std::distance(p, pend) >= 16 && x86_parse_if_16_digits(p, i)) {
+    while (std::distance(p, pend) >= 16 && parse_if_16_digits(p, i)) {
       p += 16;
     }
   }
@@ -431,9 +428,8 @@ loop_parse_if_digits(char const *&p, char const *const pend,
   // optimizes better than parse_if_eight_digits_unrolled() for UC = char.
   while (std::distance(p, pend) >= 8 /*sizeof(uint64_t)*/) {
     auto const val = read_chars_to_unsigned<uint64_t>(p);
-    if (is_made_of_eight_digits_fast(val)) {
-      i = i * 100000000 /*10 ^ sizeof(uint64_t)*/ +
-          parse_eight_digits_unrolled(val); // may overflow, that's ok
+    if (is_made_of_8_digits(val)) {
+      i = i * 100000000 + parse_8_digits(val); // may overflow, that's ok
       p += sizeof(uint64_t);
     } else {
       break;
@@ -446,9 +442,8 @@ loop_parse_if_digits(char const *&p, char const *const pend,
   // with the leaner hot path the 4-digit step now wins on gcc as well.
   if (std::distance(p, pend) >= 4 /*sizeof(uint32_t)*/) {
     auto const val = read_chars_to_unsigned<uint32_t>(p);
-    if (is_made_of_four_digits_fast(val)) {
-      i = i * 10000 /*10 ^ sizeof(uint32_t)*/ +
-          parse_four_digits_unrolled(val); // may overflow, that's ok
+    if (is_made_of_4_digits(val)) {
+      i = i * 10000 + parse_4_digits(val); // may overflow, that's ok
       p += sizeof(uint32_t);
     }
   }
@@ -911,8 +906,8 @@ parse_int_string(UC const *p, UC const *pend, T &value,
                               sizeof(UC) == 1) {
       if (len >= sizeof(uint32_t)) {
         auto const digits = read_chars_to_unsigned<uint32_t>(p);
-        if (is_made_of_four_digits_fast(digits)) {
-          auto v = parse_four_digits_unrolled(digits);
+        if (is_made_of_4_digits(digits)) {
+          auto v = parse_4_digits(digits);
           if (len >= 5 && is_integer(p[4])) {
             v = v * 10 + static_cast<uint32_t>(p[4] - '0');
             if (len >= 6 && is_integer(p[5])) {

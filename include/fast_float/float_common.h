@@ -47,10 +47,9 @@ typedef uint_fast8_t limb_t;
 // Size of bits in the mantissa and path and rounding shifts
 typedef int_fast8_t am_bits_t;
 
-// 16 bit signed integer is used for power to cover all double exponents.
+// 16 bit signed integer is used for power to cover all exponents up to double.
 typedef int_fast16_t am_pow_t;
-// Power bias is signed for handling a denormal float
-// or an invalid mantissa.
+// Power bias is signed for handling a denormal float or an invalid mantissa.
 // Bias so we can get the real exponent with an invalid adjusted_mantissa.
 constexpr static am_pow_t invalid_am_bias =
     std::numeric_limits<int16_t>::min() + 1;
@@ -269,6 +268,7 @@ static_assert(FASTFLOAT_X86_SIMD == 20 || FASTFLOAT_X86_SIMD == 42 ||
 #define fastfloat_unlikely(x) (x)
 #endif
 
+// clang-format off
 #ifndef FASTFLOAT_ASSERT
 #define FASTFLOAT_ASSERT(x)                                                    \
   { ((void)(x)); }
@@ -278,6 +278,7 @@ static_assert(FASTFLOAT_X86_SIMD == 20 || FASTFLOAT_X86_SIMD == 42 ||
 #define FASTFLOAT_DEBUG_ASSERT(x)                                              \
   { ((void)(x)); }
 #endif
+// clang-format on
 
 // rust style `try!()` macro, or `?` operator
 #define FASTFLOAT_TRY(x)                                                       \

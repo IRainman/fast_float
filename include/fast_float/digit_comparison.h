@@ -222,7 +222,7 @@ template <typename UC>
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 void
 parse_eight_digits(UC const *&p, limb &value, am_digits &counter,
                    am_digits &count) noexcept {
-  value = value * 100000000 + parse_eight_digits_unrolled(p);
+  value = value * 100000000 + parse_8_digits(p);
   p += 8;
   counter += 8;
   count += 8;

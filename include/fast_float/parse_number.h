@@ -278,7 +278,7 @@ template <typename T, typename UC>
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 from_chars_result_t<UC>
 from_chars_advanced(parsed_number_string_t<UC> const &pns, T &value) noexcept {
   static_assert(is_supported_float_type<T>::value,
-                "only some floating-point types are supported");
+                "this type of floating-point type isn't supported");
   static_assert(is_supported_char_type<UC>::value,
                 "only char, wchar_t, char16_t and char32_t are supported");
 
@@ -349,7 +349,7 @@ fastfloat_really_inline FASTFLOAT_CONSTEXPR20 from_chars_result_t<UC>
 from_chars_float_advanced(UC const *first, UC const *last, T &value,
                           parse_options_t<UC> const options) noexcept {
   static_assert(is_supported_float_type<T>::value,
-                "only some floating-point types are supported");
+                "this type of floating-point type isn't supported");
   static_assert(is_supported_char_type<UC>::value,
                 "only char, wchar_t, char16_t and char32_t are supported");
 
@@ -590,6 +590,10 @@ from_chars_int_advanced(UC const *first, UC const *last, T &value,
   static_assert(is_supported_char_type<UC>::value,
                 "only char, wchar_t, char16_t and char32_t are supported");
 
+#ifdef FASTFLOAT_ISNOT_CHECKED_BOUNDS
+  // We are in parser code with external loop that checks bounds.
+  FASTFLOAT_ASSUME(first < last);
+#endif
 #ifndef FASTFLOAT_ONLY_POSITIVE_C_NUMBER_WO_INF_NAN
   if (chars_format_t(options.format & chars_format::skip_white_space)) {
     while ((first != last) && fast_float::is_space(*first)) {
@@ -597,10 +601,6 @@ from_chars_int_advanced(UC const *first, UC const *last, T &value,
     }
   }
 #else
-#ifdef FASTFLOAT_ISNOT_CHECKED_BOUNDS
-  // We are in parser code with external loop that checks bounds.
-  FASTFLOAT_ASSUME(first < last);
-#endif
 #endif
   if (
 #ifndef FASTFLOAT_ISNOT_CHECKED_BOUNDS
