@@ -225,12 +225,16 @@ using parse_options = parse_options_t<char>;
 
 #ifndef FASTFLOAT_ASSERT
 #define FASTFLOAT_ASSERT(x)                                                    \
-  { ((void)(x)); }
+  {                                                                            \
+    static_cast<void>(x);                                                      \
+  }
 #endif
 
 #ifndef FASTFLOAT_DEBUG_ASSERT
 #define FASTFLOAT_DEBUG_ASSERT(x)                                              \
-  { ((void)(x)); }
+  {                                                                            \
+    static_cast<void>(x);                                                      \
+  }
 #endif
 
 // rust style `try!()` macro, or `?` operator
@@ -509,7 +513,7 @@ leading_zeroes(uint64_t input_num) {
   // Search the mask data from most significant bit (MSB)
   // to least significant bit (LSB) for a set bit (1).
   _BitScanReverse64(&leading_zero, input_num);
-  return (int)(63 - leading_zero);
+  return static_cast<int>(63 - leading_zero);
 #else
   return leading_zeroes_generic(input_num);
 #endif
@@ -556,7 +560,7 @@ countr_zero_32(uint32_t input_num) {
 #ifdef FASTFLOAT_VISUAL_STUDIO
   unsigned long trailing_zero = 0;
   if (_BitScanForward(&trailing_zero, input_num)) {
-    return (int)trailing_zero;
+    return static_cast<int>(trailing_zero);
   }
   return 32;
 #else
@@ -566,18 +570,21 @@ countr_zero_32(uint32_t input_num) {
 
 // slow emulation routine for 32-bit
 fastfloat_really_inline constexpr uint64_t emulu(uint32_t x, uint32_t y) {
-  return x * (uint64_t)y;
+  return x * static_cast<uint64_t>(y);
 }
 
 fastfloat_really_inline FASTFLOAT_CONSTEXPR14 uint64_t
 umul128_generic(uint64_t ab, uint64_t cd, uint64_t *hi) {
-  uint64_t ad = emulu((uint32_t)(ab >> 32), (uint32_t)cd);
-  uint64_t bd = emulu((uint32_t)ab, (uint32_t)cd);
-  uint64_t adbc = ad + emulu((uint32_t)ab, (uint32_t)(cd >> 32));
-  uint64_t adbc_carry = (uint64_t)(adbc < ad);
+  uint64_t ad =
+      emulu(static_cast<uint32_t>(ab >> 32), static_cast<uint32_t>(cd));
+  uint64_t bd = emulu(static_cast<uint32_t>(ab), static_cast<uint32_t>(cd));
+  uint64_t adbc =
+      ad + emulu(static_cast<uint32_t>(ab), static_cast<uint32_t>(cd >> 32));
+  uint64_t adbc_carry = static_cast<uint64_t>(adbc < ad);
   uint64_t lo = bd + (adbc << 32);
-  *hi = emulu((uint32_t)(ab >> 32), (uint32_t)(cd >> 32)) + (adbc >> 32) +
-        (adbc_carry << 32) + (uint64_t)(lo < bd);
+  *hi =
+      emulu(static_cast<uint32_t>(ab >> 32), static_cast<uint32_t>(cd >> 32)) +
+      (adbc >> 32) + (adbc_carry << 32) + static_cast<uint64_t>(lo < bd);
   return lo;
 }
 
@@ -612,7 +619,7 @@ full_multiplication(uint64_t a, uint64_t b) {
                                    !defined(_M_ARM64) && !defined(__GNUC__))
   answer.low = _umul128(a, b, &answer.high); // _umul128 not available on ARM64
 #elif defined(FASTFLOAT_64BIT) && defined(__SIZEOF_INT128__)
-  __uint128_t r = ((__uint128_t)a) * b;
+  __uint128_t r = static_cast<__uint128_t>(a) * b;
   answer.low = uint64_t(r);
   answer.high = uint64_t(r >> 64);
 #else
@@ -874,7 +881,7 @@ template <>
 inline constexpr std::float16_t
 binary_format<std::float16_t>::exact_power_of_ten(int64_t power) {
   // Work around clang bug https://godbolt.org/z/zedh7rrhc
-  return (void)powers_of_ten[0], powers_of_ten[power];
+  return static_cast<void>(powers_of_ten[0]), powers_of_ten[power];
 }
 
 template <>
@@ -918,7 +925,7 @@ binary_format<std::float16_t>::max_mantissa_fast_path(int64_t power) {
   // power >= 0 && power <= 4
   //
   // Work around clang bug https://godbolt.org/z/zedh7rrhc
-  return (void)max_mantissa[0], max_mantissa[power];
+  return static_cast<void>(max_mantissa[0]), max_mantissa[power];
 }
 
 template <>
@@ -997,7 +1004,7 @@ template <>
 inline constexpr std::bfloat16_t
 binary_format<std::bfloat16_t>::exact_power_of_ten(int64_t power) {
   // Work around clang bug https://godbolt.org/z/zedh7rrhc
-  return (void)powers_of_ten[0], powers_of_ten[power];
+  return static_cast<void>(powers_of_ten[0]), powers_of_ten[power];
 }
 
 template <>
@@ -1041,7 +1048,7 @@ binary_format<std::bfloat16_t>::max_mantissa_fast_path(int64_t power) {
   // power >= 0 && power <= 3
   //
   // Work around clang bug https://godbolt.org/z/zedh7rrhc
-  return (void)max_mantissa[0], max_mantissa[power];
+  return static_cast<void>(max_mantissa[0]), max_mantissa[power];
 }
 
 template <>
@@ -1098,7 +1105,7 @@ binary_format<double>::max_mantissa_fast_path(int64_t power) {
   // power >= 0 && power <= 22
   //
   // Work around clang bug https://godbolt.org/z/zedh7rrhc
-  return (void)max_mantissa[0], max_mantissa[power];
+  return static_cast<void>(max_mantissa[0]), max_mantissa[power];
 }
 
 template <>
@@ -1108,20 +1115,20 @@ binary_format<float>::max_mantissa_fast_path(int64_t power) {
   // power >= 0 && power <= 10
   //
   // Work around clang bug https://godbolt.org/z/zedh7rrhc
-  return (void)max_mantissa[0], max_mantissa[power];
+  return static_cast<void>(max_mantissa[0]), max_mantissa[power];
 }
 
 template <>
 inline constexpr double
 binary_format<double>::exact_power_of_ten(int64_t power) {
   // Work around clang bug https://godbolt.org/z/zedh7rrhc
-  return (void)powers_of_ten[0], powers_of_ten[power];
+  return static_cast<void>(powers_of_ten[0]), powers_of_ten[power];
 }
 
 template <>
 inline constexpr float binary_format<float>::exact_power_of_ten(int64_t power) {
   // Work around clang bug https://godbolt.org/z/zedh7rrhc
-  return (void)powers_of_ten[0], powers_of_ten[power];
+  return static_cast<void>(powers_of_ten[0]), powers_of_ten[power];
 }
 
 template <> inline constexpr int binary_format<double>::largest_power_of_ten() {

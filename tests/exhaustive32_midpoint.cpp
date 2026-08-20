@@ -61,7 +61,7 @@ template <typename T> char *to_string(T d, char *buffer) {
 }
 
 void strtof_from_string(char const *st, float &d) {
-  char *pr = (char *)st;
+  char *pr = const_cast<char *>(st);
 #if defined(__CYGWIN__) || defined(__MINGW32__) || defined(__MINGW64__) ||     \
     defined(sun) || defined(__sun)
   d = cygwin_strtof_l(st, &pr);
