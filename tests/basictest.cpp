@@ -1065,7 +1065,7 @@ void basic_test(float val) {
   do {                                                                         \
     constexpr int verify_comptime_var =                                        \
         (basic_test<Diag::comptime>(__VA_ARGS__), 0);                          \
-    (void)verify_comptime_var;                                                 \
+    static_cast<void>(verify_comptime_var);                                    \
   } while (false)
 
 #define verify_options_runtime(...)                                            \
@@ -1077,7 +1077,7 @@ void basic_test(float val) {
   do {                                                                         \
     constexpr int verify_options_comptime_var =                                \
         (basic_test<Diag::comptime>(__VA_ARGS__, options), 0);                 \
-    (void)verify_options_comptime_var;                                         \
+    static_cast<void>(verify_options_comptime_var);                            \
   } while (false)
 
 #if defined(FASTFLOAT_CONSTEXPR_TESTS)

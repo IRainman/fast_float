@@ -75,7 +75,7 @@ int main() {
   buffer.reserve(N * 6); // up to 5 digits + delimiter
 
   for (size_t i = 0; i < N; ++i) {
-    uint16_t val = (uint16_t)dist(rng);
+    uint16_t val = static_cast<uint16_t>(dist(rng));
     expected.push_back(val);
     std::string s = std::to_string(val);
     buffer.append(s);
