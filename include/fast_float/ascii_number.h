@@ -271,10 +271,7 @@ fastfloat_really_inline FASTFLOAT_CONSTEXPR20 void
 parse_digits_until_19(char const *&p, char const *pend, am_mant_t &mantissa) {
 #if FASTFLOAT_X86_SIMD >= 31
   if (!is_constant_evaluated()) {
-    /*
-     * If mantissa has fewer than two digits, a complete
-     * 16-digit block cannot exceed 10^18 - 1.
-     */
+    // If mantissa < 10^2, a 16-digit block is guaranteed < 10^18 - 1.
     while (std::distance(p, pend) >= 16 && mantissa < 100) {
       auto const value = parse_16_digits(p);
       mantissa = mantissa * 10000000000000000ULL + value;
@@ -282,24 +279,24 @@ parse_digits_until_19(char const *&p, char const *pend, am_mant_t &mantissa) {
     }
   }
 #endif
-  // An 8-digit block is safe while: mantissa < 10^10 because the result is
-  // guaranteed < 10^18.
+  // If mantissa < 10^10, a 8-digit block is guaranteed < 10^18 - 1.
   while (std::distance(p, pend) >= 8 && mantissa < 10000000000ULL) {
     auto const value = parse_8_digits(p);
     mantissa = mantissa * 100000000ULL + value;
     p += 8;
   }
-  // ?????
-  while (std::distance(p, pend) >= 4 && mantissa < 10000000000ULL) {
+  // If mantissa < 10^12, a 4-digit block is guaranteed < 10^18 - 1.
+  while (std::distance(p, pend) >= 4 && mantissa < 1000000000000ULL) {
     auto const value = read_chars_to_unsigned<uint32_t>(p);
     mantissa = mantissa * 10000 + parse_4_digits(value);
     p += 4;
   }
-  // Finalizer
+  // If mantissa < 10^19, we should parse digits one by one.
   while (p != pend && mantissa < minimal_nineteen_digit_integer) {
     mantissa = mantissa * 10 + static_cast<uint8_t>(*p - '0');
     ++p;
   }
+  // While mantissa >= 10^19, we should stop parsing digits.
 }
 
 template <typename UC, FASTFLOAT_ENABLE_IF(!std::is_same<UC, char>::value) = 0>
