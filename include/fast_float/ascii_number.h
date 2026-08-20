@@ -109,7 +109,7 @@ fastfloat_really_inline uint64_t simd_read8(char16_t const *chars) {
   FASTFLOAT_SIMD_RESTORE_WARNINGS
 }
 
-#elif defined(FASTFLOAT_ARM_NEON)
+#elif FASTFLOAT_ARM_NEON
 
 fastfloat_really_inline uint64_t simd_read8(uint16x8_t const &data) {
   uint8x8_t utf8_packed = vmovn_u16(data);

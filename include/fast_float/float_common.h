@@ -186,14 +186,14 @@ using parse_options = parse_options_t<char>;
 #endif
 #endif
 
-#ifdef FASTFLOAT_USE_SIMD // user defined
-#else
-#ifdef FASTFLOAT_X86_SIMD // user defined level
+#ifdef FASTFLOAT_USE_SIMD
+// user defined
+#elif defined(FASTFLOAT_X86_SIMD)
+// user defined level
 static_assert(FASTFLOAT_X86_SIMD == 20 || FASTFLOAT_X86_SIMD == 42 ||
-                  FASTFLOAT_X86_SIMD == 52,
+                  FASTFLOAT_X86_SIMD == 52 || FASTFLOAT_ARM_NEON,
               "FASTFLOAT_X86_SIMD should be 20(SSE2), 42(SSE4.2) and 52(AVX2)");
-#else                     // auto detect
-#if defined(__AVX2__)
+#elif defined(__AVX2__)
 #define FASTFLOAT_X86_SIMD 52
 #elif defined(__AVX__)
 // On MSVC there's no way to check for SSE4.2 specifically so check AVX.
@@ -210,18 +210,13 @@ static_assert(FASTFLOAT_X86_SIMD == 20 || FASTFLOAT_X86_SIMD == 42 ||
                             (defined(_M_AMD64) || defined(_M_X64) ||           \
                              (defined(_M_IX86_FP) && _M_IX86_FP == 2)))
 #define FASTFLOAT_X86_SIMD 20
-#endif
-#endif
-
-#if defined(__aarch64__) || defined(_M_ARM64)
+#elif defined(__aarch64__) || defined(_M_ARM64)
 #define FASTFLOAT_ARM_NEON 1
 #endif
 
-#if defined(FASTFLOAT_X86_SIMD) || defined(FASTFLOAT_ARM_NEON)
+#if FASTFLOAT_X86_SIMD || FASTFLOAT_ARM_NEON
 #define FASTFLOAT_USE_SIMD 1
-#endif
 
-#if FASTFLOAT_USE_SIMD
 #if defined(__GNUC__)
 // disable -Wcast-align=strict (GCC only)
 #define FASTFLOAT_SIMD_DISABLE_WARNINGS                                        \
@@ -232,7 +227,6 @@ static_assert(FASTFLOAT_X86_SIMD == 20 || FASTFLOAT_X86_SIMD == 42 ||
 #else
 #define FASTFLOAT_SIMD_DISABLE_WARNINGS
 #define FASTFLOAT_SIMD_RESTORE_WARNINGS
-#endif
 #endif
 #endif
 

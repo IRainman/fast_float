@@ -51,10 +51,10 @@ Introduced new optional macros to minimize overhead when certain parsing feature
   Automatically uses std::bit_cast if available to reduce code size and speed up.
   
 * **`FASTFLOAT_X86_SIMD`**
-  Automatically uses reworking SSE parsing algorithms to improve performance on x86 machines.
+  Automatically uses reworking SSE parsing algorithms to improve performance on x86 machines. And hardware level also can be set manually by user.
   
 * **`FASTFLOAT_USE_SIMD`**
-  Add possibility to completely disable manual algorithms realization and give compiler more freedom
+  Can be set to 0 for completely disable manually optimized SIMD paths and use compiler + linker to give the best possible result automatically
 
 ---
 
