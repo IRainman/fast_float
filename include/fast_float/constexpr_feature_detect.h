@@ -102,43 +102,25 @@
 #endif
 
 // C++20 consteval.
-//
-// consteval is a language feature. It must be detected independently from
-// std::is_constant_evaluated() and from the C++20 constexpr library.
-#if FASTFLOAT_CXX20
-#if defined(__apple_build_version__) && __apple_build_version__ < 14000029L
-#define FASTFLOAT_USE_CONSTEVAL 0 // consteval is broken in Apple clang < 14.
-#elif defined(_MSC_VER) && !defined(__clang__) && _MSC_VER < 1940
-#define FASTFLOAT_USE_CONSTEVAL                                                \
-  0 // consteval is broken in some MSVC2022 versions.
-#elif defined(__cpp_consteval) && __cpp_consteval >= 201811L
-#define FASTFLOAT_USE_CONSTEVAL 1
-#else
-#define FASTFLOAT_USE_CONSTEVAL 0
-#endif
-#else
-#define FASTFLOAT_USE_CONSTEVAL 0
-#endif
-
-#if FASTFLOAT_USE_CONSTEVAL
+#if defined(__cpp_consteval) && __cpp_consteval >= 201811L
 #define FASTFLOAT_CONSTEVAL consteval
 #else
 #define FASTFLOAT_CONSTEVAL
 #endif
 
-// C++20 constexpr.
-//
-// This is deliberately independent from consteval. The functions using
-// FASTFLOAT_CONSTEXPR20 also require the corresponding C++20 constexpr
-// library facilities.
-#if FASTFLOAT_CXX20 && FASTFLOAT_HAS_IS_CONSTANT_EVALUATED &&                  \
-    FASTFLOAT_HAS_BIT_CAST && defined(__cpp_lib_constexpr_algorithms) &&       \
-    __cpp_lib_constexpr_algorithms >= 201806L
+// C++20 constexpr function support.
+#if defined(_MSC_VER)
+#if defined(_MSVC_LANG) && _MSVC_LANG >= 202002L
 #define FASTFLOAT_CONSTEXPR20 constexpr
-#define FASTFLOAT_IS_CONSTEXPR 1
 #else
 #define FASTFLOAT_CONSTEXPR20
-#define FASTFLOAT_IS_CONSTEXPR 0
+#endif
+#elif defined(__cpp_constexpr) && __cpp_constexpr >= 201907L
+#define FASTFLOAT_CONSTEXPR20 constexpr
+#elif defined(__cplusplus) && __cplusplus >= 202002L
+#define FASTFLOAT_CONSTEXPR20 constexpr
+#else
+#define FASTFLOAT_CONSTEXPR20
 #endif
 
 // C++20 std::byteswap
