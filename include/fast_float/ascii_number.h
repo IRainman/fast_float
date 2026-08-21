@@ -30,7 +30,7 @@ fastfloat_really_inline constexpr bool has_simd_opt() noexcept {
 // Next function can be micro-optimized, but compilers are entirely
 // able to optimize it well.
 template <typename UC>
-fastfloat_really_inline constexpr bool is_integer(UC c) noexcept {
+fastfloat_really_inline FASTFLOAT_CONSTEXPR14 bool is_integer(UC c) noexcept {
   const auto d = c - UC('0');
   // UC may be signed.
   return d >= 0 && d <= 9;
