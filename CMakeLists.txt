@@ -1,26 +1,23 @@
 cmake_minimum_required(VERSION 3.14)
 
+
 project(fast_float VERSION 8.2.10 LANGUAGES CXX)
 
-# C++ standard used by the project.
-# fast_float itself requires C++11, while some tests/features use newer standards.
 set(FASTFLOAT_CXX_STANDARD 11 CACHE STRING "the C++ standard to use for fastfloat")
 set(CMAKE_CXX_STANDARD ${FASTFLOAT_CXX_STANDARD})
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-
 option(FASTFLOAT_TEST "Enable tests" OFF)
 
 if(FASTFLOAT_TEST)
   enable_testing()
   add_subdirectory(tests)
-else()
+else(FASTFLOAT_TEST)
   message(STATUS "Tests are disabled. Set FASTFLOAT_TEST to ON to run tests.")
-endif()
+endif(FASTFLOAT_TEST)
 
 option(FASTFLOAT_SANITIZE "Sanitize addresses" OFF)
-
-if(NOT CMAKE_BUILD_TYPE)
+if (NOT CMAKE_BUILD_TYPE)
   if(FASTFLOAT_SANITIZE)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
   else()
@@ -38,80 +35,57 @@ endif()
 add_library(fast_float INTERFACE)
 
 option(FASTFLOAT_BENCHMARKS "Enable benchmarks" OFF)
-
 if(FASTFLOAT_BENCHMARKS)
   add_subdirectory(benchmarks)
-else()
+else(FASTFLOAT_BENCHMARKS)
   message(STATUS "Benchmarks are disabled. Set FASTFLOAT_BENCHMARKS to ON to build benchmarks (assumes C++17).")
-endif()
+endif(FASTFLOAT_BENCHMARKS)
 
 add_library(FastFloat::fast_float ALIAS fast_float)
-
 target_include_directories(
   fast_float
   INTERFACE
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
-
 target_compile_features(fast_float INTERFACE cxx_std_11)
 
 if(FASTFLOAT_SANITIZE)
-  if(MSVC)
-    target_compile_options(
-      fast_float
-      INTERFACE
-        /fsanitize=address
-    )
-  elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(
-      fast_float
-      INTERFACE
-        -fsanitize=address
-        -fno-omit-frame-pointer
-        -fsanitize=undefined
-        -fno-sanitize-recover=all
-    )
-
-    target_link_libraries(
-      fast_float
-      INTERFACE
-        -fsanitize=address
-        -fno-omit-frame-pointer
-        -fsanitize=undefined
-        -fno-sanitize-recover=all
-    )
-
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-      target_link_libraries(fast_float INTERFACE -fuse-ld=gold)
-    endif()
+  target_compile_options(
+    fast_float
+    INTERFACE
+      -fsanitize=address
+      -fno-omit-frame-pointer
+      -fsanitize=undefined
+      -fno-sanitize-recover=all
+  )
+  target_link_libraries(
+    fast_float
+    INTERFACE
+      -fsanitize=address
+      -fno-omit-frame-pointer
+      -fsanitize=undefined
+      -fno-sanitize-recover=all
+  )
+  if (CMAKE_COMPILER_IS_GNUCC)
+    target_link_libraries(fast_float INTERFACE -fuse-ld=gold)
   endif()
 endif()
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC"
-   AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.10)
-  target_compile_options(fast_float INTERFACE /permissive-)
-endif()
+target_compile_options(
+  fast_float
+  INTERFACE
+  $<$<AND:$<CXX_COMPILER_ID:MSVC>,$<VERSION_GREATER_EQUAL:$<CXX_COMPILER_VERSION>,19.10>>:/permissive->
+)
 
 if(FASTFLOAT_INSTALL)
   include(CMakePackageConfigHelpers)
 
-  set(
-    FASTFLOAT_VERSION_CONFIG
-    "${CMAKE_CURRENT_BINARY_DIR}/module/FastFloatConfigVersion.cmake"
-  )
+  set(FASTFLOAT_VERSION_CONFIG "${CMAKE_CURRENT_BINARY_DIR}/module/FastFloatConfigVersion.cmake")
+  set(FASTFLOAT_PROJECT_CONFIG "${CMAKE_CURRENT_BINARY_DIR}/module/FastFloatConfig.cmake")
+  set(FASTFLOAT_CONFIG_INSTALL_DIR "${CMAKE_INSTALL_DATAROOTDIR}/cmake/FastFloat")
 
-  set(
-    FASTFLOAT_PROJECT_CONFIG
-    "${CMAKE_CURRENT_BINARY_DIR}/module/FastFloatConfig.cmake"
-  )
-
-  set(
-    FASTFLOAT_CONFIG_INSTALL_DIR
-    "${CMAKE_INSTALL_DATAROOTDIR}/cmake/FastFloat"
-  )
-
-  if(CMAKE_VERSION VERSION_LESS "3.14")
+  if(${CMAKE_VERSION} VERSION_LESS "3.14")
     write_basic_package_version_file(
       "${FASTFLOAT_VERSION_CONFIG}"
       VERSION ${PROJECT_VERSION}

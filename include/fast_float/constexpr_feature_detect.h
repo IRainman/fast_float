@@ -72,10 +72,6 @@
 #define FASTFLOAT_HAS_BIT_CAST 0
 #endif
 
-// std::is_constant_evaluated()
-//
-// This is a library facility and must be detected independently from
-// consteval. Do not use it to infer the C++ language mode.
 #if defined(__cpp_lib_is_constant_evaluated) &&                                \
     __cpp_lib_is_constant_evaluated >= 201811L
 #define FASTFLOAT_HAS_IS_CONSTANT_EVALUATED 1
@@ -83,32 +79,14 @@
 #define FASTFLOAT_HAS_IS_CONSTANT_EVALUATED 0
 #endif
 
-// C++20 language mode.
-//
-// _MSVC_LANG is required for MSVC because __cplusplus historically does not
-// report the selected language mode there.
-#if defined(_MSC_VER)
-#if defined(_MSVC_LANG) && _MSVC_LANG >= 202002L
-#define FASTFLOAT_CXX20 1
-#else
-#define FASTFLOAT_CXX20 0
-#endif
-#else
-#if defined(__cplusplus) && __cplusplus >= 202002L
-#define FASTFLOAT_CXX20 1
-#else
-#define FASTFLOAT_CXX20 0
-#endif
-#endif
-
-// C++20 consteval.
+// C++20 consteval
 #if defined(__cpp_consteval) && __cpp_consteval >= 201811L
 #define FASTFLOAT_CONSTEVAL consteval
 #else
-#define FASTFLOAT_CONSTEVAL
+#define FASTFLOAT_CONSTEVAL FASTFLOAT_CONSTEXPR14
 #endif
 
-// C++20 constexpr function support.
+// C++20 constexpr function support
 #if defined(_MSC_VER)
 #if defined(_MSVC_LANG) && _MSVC_LANG >= 202002L
 #define FASTFLOAT_CONSTEXPR20 constexpr
