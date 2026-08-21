@@ -1,0 +1,25 @@
+name: Ubuntu latest CI (clang 22)
+
+on: [push, pull_request]
+
+jobs:
+  ubuntu-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install clang++-22
+        run: sudo apt-get install -y clang++-22
+      - name: Use cmake
+        run: |
+          mkdir build &&
+          cd build &&
+          CXX=clang++-22 cmake -DFASTFLOAT_TEST=ON  ..  &&
+          cmake --build .   &&
+          ctest --output-on-failure
+      - name: Use cmake CXX23
+        run: |
+          mkdir build23 &&
+          cd build23 &&
+          CXX=clang++-22 cmake -DFASTFLOAT_CXX_STANDARD=23 -DFASTFLOAT_TEST=ON  ..  &&
+          cmake --build .   &&
+          ctest --output-on-failure
