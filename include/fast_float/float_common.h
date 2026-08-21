@@ -571,7 +571,7 @@ leading_zeroes(uint64_t input_num) noexcept {
 #else
   return static_cast<limb_t>(leading_zeroes_generic(input_num));
 #endif
-#elif __has_builtin(__builtin_clzll)
+#elif FASTFLOAT_HAS_BUILTIN(__builtin_clzll)
   return static_cast<limb_t>(__builtin_clzll(input_num));
 #else
   // Unlike MSVC, clang and gcc recognize this implementation and replace
@@ -629,26 +629,33 @@ countr_zero_32(uint32_t input_num) noexcept {
 #endif
 }
 
-// For what exactly? It's not only for 32bit.
-fastfloat_really_inline constexpr uint64_t emulu(uint32_t x,
-                                                 uint32_t y) noexcept {
+fastfloat_really_inline constexpr uint64_t emulu_generic(uint32_t x,
+                                                         uint32_t y) noexcept {
   return x * static_cast<uint64_t>(y);
 }
 
+fastfloat_really_inline uint64_t umul128_generic(uint64_t ab, uint64_t cd,
+                                                 uint64_t &hi) noexcept {
+  auto ab_shifted = static_cast<uint32_t>(ab >> 32);
+  auto cd_shifted = static_cast<uint32_t>(cd >> 32);
+
+  auto ad = emulu_generic(ab_shifted, static_cast<uint32_t>(cd));
+  auto bd = emulu_generic(static_cast<uint32_t>(ab), static_cast<uint32_t>(cd));
+  auto adbc = ad + emulu_generic(static_cast<uint32_t>(ab), cd_shifted);
+  auto adbc_carry = static_cast<uint64_t>(adbc < ad) << 32;
+  auto lo = bd + (adbc << 32);
+
+  hi = emulu_generic(ab_shifted, cd_shifted) +
+       static_cast<uint32_t>(adbc >> 32) + adbc_carry +
+       static_cast<uint64_t>(lo < bd);
+  return lo;
+}
+
+// Compute hi and low parts of 128-bit.
 fastfloat_really_inline FASTFLOAT_CONSTEXPR14 uint64_t
 umul128(uint64_t ab, uint64_t cd, uint64_t &hi) noexcept {
   if (is_constant_evaluated()) {
-    auto ab_shifted = static_cast<uint32_t>(ab >> 32);
-    auto cd_shifted = static_cast<uint32_t>(cd >> 32);
-
-    auto ad = emulu(ab_shifted, static_cast<uint32_t>(cd));
-    auto bd = emulu(static_cast<uint32_t>(ab), static_cast<uint32_t>(cd));
-    auto adbc = ad + emulu(static_cast<uint32_t>(ab), cd_shifted);
-    auto adbc_carry = static_cast<uint64_t>(adbc < ad) << 32;
-    auto lo = bd + (adbc << 32);
-    hi = emulu(ab_shifted, cd_shifted) + static_cast<uint32_t>(adbc >> 32) +
-         adbc_carry + static_cast<uint64_t>(lo < bd);
-    return lo;
+    return umul128_generic(ab, cd, hi);
   }
 #if defined(_M_ARM64) && !defined(__MINGW32__)
   // ARM64 has native support for 64-bit multiplications, no need to emulate
@@ -657,11 +664,13 @@ umul128(uint64_t ab, uint64_t cd, uint64_t &hi) noexcept {
   return ab * cd;
 #elif (defined(_WIN64) && !defined(__clang__) && !defined(_M_ARM64) &&         \
        !defined(__GNUC__))
-return _umul128(ab, cd, &hi); // _umul128 not available on ARM64
+  return _umul128(ab, cd, &hi); // _umul128 not available on ARM64
+#else
+  return umul128_generic(ab, cd, hi);
 #endif
 }
 
-// compute 64-bit a*b
+// Compute 128-bit result.
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 value128
 full_multiplication(uint64_t a, uint64_t b) noexcept {
   value128 answer;
