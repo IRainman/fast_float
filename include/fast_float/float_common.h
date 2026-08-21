@@ -634,8 +634,8 @@ fastfloat_really_inline constexpr uint64_t emulu_generic(uint32_t x,
   return x * static_cast<uint64_t>(y);
 }
 
-fastfloat_really_inline uint64_t umul128_generic(uint64_t ab, uint64_t cd,
-                                                 uint64_t &hi) noexcept {
+fastfloat_really_inline constexpr uint64_t
+umul128_generic(uint64_t ab, uint64_t cd, uint64_t &hi) noexcept {
   auto ab_shifted = static_cast<uint32_t>(ab >> 32);
   auto cd_shifted = static_cast<uint32_t>(cd >> 32);
 
