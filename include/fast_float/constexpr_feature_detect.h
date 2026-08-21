@@ -10,9 +10,9 @@
 // C++14 constexpr
 #if defined(__cpp_constexpr) && __cpp_constexpr >= 201304L
 #define FASTFLOAT_CONSTEXPR14 constexpr
-#elif defined(__cplusplus) && __cplusplus >= 201402L
+#elif __cplusplus >= 201402L
 #define FASTFLOAT_CONSTEXPR14 constexpr
-#elif defined(_MSC_VER) && defined(_MSVC_LANG) && _MSVC_LANG >= 201402L
+#elif defined(_MSC_VER) && _MSC_VER >= 1910 && _MSVC_LANG >= 201402L
 #define FASTFLOAT_CONSTEXPR14 constexpr
 #else
 #define FASTFLOAT_CONSTEXPR14
@@ -21,10 +21,10 @@
 // C++14 variable templates
 #if defined(__cpp_variable_templates) && __cpp_variable_templates >= 201304L
 #define FASTFLOAT_HAS_VARIABLE_TEMPLATES 1
-#elif defined(__cplusplus) && __cplusplus >= 201402L
+#elif __cplusplus >= 201402L
 #define FASTFLOAT_HAS_VARIABLE_TEMPLATES 1
 #elif defined(_MSC_FULL_VER) && _MSC_FULL_VER >= 190023918L &&                 \
-    defined(_MSVC_LANG) && _MSVC_LANG >= 201402L
+    _MSVC_LANG >= 201402L
 #define FASTFLOAT_HAS_VARIABLE_TEMPLATES 1
 #else
 #define FASTFLOAT_HAS_VARIABLE_TEMPLATES 0
@@ -35,9 +35,9 @@
 #define FASTFLOAT_CONSTEXPR17 constexpr
 #elif defined(__cpp_constexpr) && __cpp_constexpr >= 201603L
 #define FASTFLOAT_CONSTEXPR17 constexpr
-#elif defined(__cplusplus) && __cplusplus >= 201703L
+#elif __cplusplus >= 201703L
 #define FASTFLOAT_CONSTEXPR17 constexpr
-#elif defined(_MSC_VER) && defined(_MSVC_LANG) && _MSVC_LANG >= 201703L
+#elif defined(_MSC_VER) && _MSC_VER >= 1911 && _MSVC_LANG >= 201703L
 #define FASTFLOAT_CONSTEXPR17 constexpr
 #else
 #define FASTFLOAT_CONSTEXPR17
@@ -46,17 +46,16 @@
 // C++17 inline variables
 #if defined(__cpp_inline_variables) && __cpp_inline_variables >= 201606L
 #define FASTFLOAT_INLINE_VARIABLE inline constexpr
-#elif defined(__cplusplus) && __cplusplus >= 201703L
+#elif __cplusplus >= 201703L
 #define FASTFLOAT_INLINE_VARIABLE inline constexpr
-#elif defined(_MSC_VER) && defined(_MSVC_LANG) && _MSVC_LANG >= 201703L
+#elif defined(_MSC_VER) && _MSC_VER >= 1912 && _MSVC_LANG >= 201703L
 #define FASTFLOAT_INLINE_VARIABLE inline constexpr
 #else
 #define FASTFLOAT_INLINE_VARIABLE static constexpr
 #endif
 
 // Before C++17, constexpr variables may need an out-of-class definition.
-#if (defined(__cplusplus) && __cplusplus >= 201703L) ||                        \
-    (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L)
+#if __cplusplus >= 201703L || _MSVC_LANG >= 201703L
 #define FASTFLOAT_DETAIL_MUST_DEFINE_CONSTEXPR_VARIABLE 0
 #else
 #define FASTFLOAT_DETAIL_MUST_DEFINE_CONSTEXPR_VARIABLE 1
@@ -69,28 +68,21 @@
 #define FASTFLOAT_HAS_BIT_CAST 0
 #endif
 
-// C++20 std::is_constant_evaluated
+// C++20 constexpr library support, including std::is_constant_evaluated(),
+// std::bit_cast(), std::copy and std::fill, and constexpr algorithms. Therefore
+// all required library feature macros must be present.
 #if defined(__cpp_lib_is_constant_evaluated) &&                                \
     __cpp_lib_is_constant_evaluated >= 201811L && defined(__cpp_consteval) &&  \
-    __cpp_consteval >= 201811L
-#define FASTFLOAT_HAS_IS_CONSTANT_EVALUATED 1
+    __cpp_consteval >= 201811L && FASTFLOAT_HAS_BIT_CAST
 #define FASTFLOAT_CONSTEVAL consteval
-#else
-#define FASTFLOAT_HAS_IS_CONSTANT_EVALUATED 0
-#define FASTFLOAT_CONSTEVAL
-#endif
-
-// C++20 constexpr library support, including std::is_constant_evaluated(),
-// std::bit_cast(), and constexpr algorithms. Therefore all required library
-// feature macros must be present.
-#if FASTFLOAT_HAS_IS_CONSTANT_EVALUATED && FASTFLOAT_HAS_BIT_CAST &&           \
-    defined(__cpp_lib_constexpr_algorithms) &&                                 \
-    __cpp_lib_constexpr_algorithms >= 201806L
 #define FASTFLOAT_CONSTEXPR20 constexpr
 #define FASTFLOAT_IS_CONSTEXPR 1
+#define FASTFLOAT_HAS_IS_CONSTANT_EVALUATED 1
 #else
+#define FASTFLOAT_CONSTEVAL
 #define FASTFLOAT_CONSTEXPR20
 #define FASTFLOAT_IS_CONSTEXPR 0
+#define FASTFLOAT_HAS_IS_CONSTANT_EVALUATED 0
 #endif
 
 // C++20 std::byteswap
