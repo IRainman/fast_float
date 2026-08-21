@@ -629,13 +629,11 @@ countr_zero_32(uint32_t input_num) noexcept {
 #endif
 }
 
-#ifdef FASTFLOAT_32BIT
-// slow emulation routine for 32-bit
+// For what exactly? It's not only for 32bit.
 fastfloat_really_inline constexpr uint64_t emulu(uint32_t x,
                                                  uint32_t y) noexcept {
   return x * static_cast<uint64_t>(y);
 }
-#endif
 
 fastfloat_really_inline FASTFLOAT_CONSTEXPR14 uint64_t
 umul128(uint64_t ab, uint64_t cd, uint64_t &hi) noexcept {
@@ -666,17 +664,13 @@ umul128(uint64_t ab, uint64_t cd, uint64_t &hi) noexcept {
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 value128
 full_multiplication(uint64_t a, uint64_t b) noexcept {
   value128 answer;
-  if (is_constant_evaluated()) {
-    answer.low = umul128(a, b, answer.high);
-  } else {
 #if defined(FASTFLOAT_64BIT) && defined(__SIZEOF_INT128__)
-    __uint128_t r = (static_cast<__uint128_t>(a)) * b;
-    answer.low = static_cast<uint64_t>(r);
-    answer.high = static_cast<uint64_t>(r >> 64);
+  __uint128_t r = (static_cast<__uint128_t>(a)) * b;
+  answer.low = static_cast<uint64_t>(r);
+  answer.high = static_cast<uint64_t>(r >> 64);
 #else
-    answer.low = umul128(a, b, answer.high);
+  answer.low = umul128(a, b, answer.high);
 #endif
-  }
   return answer;
 }
 
