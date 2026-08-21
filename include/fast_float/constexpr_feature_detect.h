@@ -8,11 +8,15 @@
 #endif
 
 // C++14 constexpr
-#if defined(__cpp_constexpr) && __cpp_constexpr >= 201304L
+#if defined(_MSC_VER)
+#if _MSVC_LANG >= 201402L
+#define FASTFLOAT_CONSTEXPR14 constexpr
+#else
+#define FASTFLOAT_CONSTEXPR14
+#endif
+#elif defined(__cpp_constexpr) && __cpp_constexpr >= 201304L
 #define FASTFLOAT_CONSTEXPR14 constexpr
 #elif __cplusplus >= 201402L
-#define FASTFLOAT_CONSTEXPR14 constexpr
-#elif defined(_MSC_VER) && _MSC_VER >= 1910 && _MSVC_LANG >= 201402L
 #define FASTFLOAT_CONSTEXPR14 constexpr
 #else
 #define FASTFLOAT_CONSTEXPR14
@@ -37,13 +41,32 @@
 #define FASTFLOAT_HAS_BIT_CAST 0
 #endif
 
-#if defined(__cpp_lib_is_constant_evaluated) &&                                \
+// Detect consteval, C++20 constexpr extensions and std::is_constant_evaluated.
+#if !defined(__cpp_lib_is_constant_evaluated)
+#define FASTFLOAT__USE_CONSTEVAL 0
+#elif __cplusplus < 201709L
+#define FASTFLOAT_USE_CONSTEVAL 0
+#elif defined(__apple_build_version__) && __apple_build_version__ < 14000029L
+#define FASTFLOAT_USE_CONSTEVAL 0 // consteval is broken in Apple clang < 14.
+#elif _MSC_VER && _MSC_VER < 1940
+#define FASTFLOAT_USE_CONSTEVAL                                                \
+  0 // consteval is broken in some MSVC2022 versions.
+#elif defined(__cpp_consteval)
+#define FASTFLOAT_USE_CONSTEVAL 1
+#elif defined(__cpp_lib_is_constant_evaluated) &&                              \
     __cpp_lib_is_constant_evaluated >= 201811L
-#define FASTFLOAT_HAS_IS_CONSTANT_EVALUATED 1
-#define FASTFLOAT_CONSTEVAL consteval
+#define FASTFLOAT_USE_CONSTEVAL 1
+#elif FMT_GCC_VERSION >= 1002 || FMT_CLANG_VERSION >= 1101
+#define FASTFLOAT_USE_CONSTEVAL 1
 #else
-#define FASTFLOAT_HAS_IS_CONSTANT_EVALUATED 0
-#define FASTFLOAT_CONSTEVAL FASTFLOAT_CONSTEXPR14
+#define FASTFLOAT_USE_CONSTEVAL 0
+#endif
+#if FASTFLOAT_USE_CONSTEVAL
+#define FASTFLOAT_CONSTEVAL consteval
+#define FASTFLOAT_CONSTEXPR20 constexpr
+#else
+#define FASTFLOAT_CONSTEVAL
+#define FASTFLOAT_CONSTEXPR20
 #endif
 
 #if defined(__cpp_lib_byteswap)
@@ -74,17 +97,6 @@
 #define FASTFLOAT_INLINE_VARIABLE inline constexpr
 #else
 #define FASTFLOAT_INLINE_VARIABLE static constexpr
-#endif
-
-// Testing for relevant C++20 constexpr library features
-#if FASTFLOAT_HAS_IS_CONSTANT_EVALUATED && FASTFLOAT_HAS_BIT_CAST &&           \
-    defined(__cpp_lib_constexpr_algorithms) &&                                 \
-    __cpp_lib_constexpr_algorithms >= 201806L /*For std::copy and std::fill*/
-#define FASTFLOAT_CONSTEXPR20 constexpr
-#define FASTFLOAT_IS_CONSTEXPR 1
-#else
-#define FASTFLOAT_CONSTEXPR20
-#define FASTFLOAT_IS_CONSTEXPR 0
 #endif
 
 #if __cplusplus >= 201703L || (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L)
