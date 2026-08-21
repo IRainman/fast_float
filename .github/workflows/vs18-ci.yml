@@ -5,7 +5,7 @@ on: [push, pull_request]
 jobs:
   ci:
     name: vs18/${{matrix.arch}}/${{matrix.cfg}}
-    runs-on: windows-latest
+    runs-on: windows-2025
     strategy:
       fail-fast: false
       matrix:

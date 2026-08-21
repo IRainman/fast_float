@@ -24,7 +24,7 @@
 #elif __cplusplus >= 201402L
 #define FASTFLOAT_HAS_VARIABLE_TEMPLATES 1
 #elif defined(_MSC_FULL_VER) && _MSC_FULL_VER >= 190023918L &&                 \
-    _MSVC_LANG >= 201402L
+    defined(_MSC_VER) && _MSVC_LANG >= 201402L
 #define FASTFLOAT_HAS_VARIABLE_TEMPLATES 1
 #else
 #define FASTFLOAT_HAS_VARIABLE_TEMPLATES 0
@@ -55,7 +55,7 @@
 #endif
 
 // Before C++17, constexpr variables may need an out-of-class definition.
-#if __cplusplus >= 201703L || _MSVC_LANG >= 201703L
+#if __cplusplus >= 201703L || (defined(_MSC_VER) && _MSVC_LANG >= 201703L)
 #define FASTFLOAT_DETAIL_MUST_DEFINE_CONSTEXPR_VARIABLE 0
 #else
 #define FASTFLOAT_DETAIL_MUST_DEFINE_CONSTEXPR_VARIABLE 1
