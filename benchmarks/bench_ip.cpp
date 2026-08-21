@@ -113,10 +113,10 @@ int main() {
   buf.reserve(N * ip_size);
 
   for (size_t i = 0; i < N; ++i) {
-    uint8_t a = (uint8_t)dist(rng);
-    uint8_t b = (uint8_t)dist(rng);
-    uint8_t c = (uint8_t)dist(rng);
-    uint8_t d = (uint8_t)dist(rng);
+    uint8_t a = static_cast<uint8_t>(dist(rng));
+    uint8_t b = static_cast<uint8_t>(dist(rng));
+    uint8_t c = static_cast<uint8_t>(dist(rng));
+    uint8_t d = static_cast<uint8_t>(dist(rng));
     std::string ip_line = make_ip_line(a, b, c, d);
     ip_line.resize(ip_size, ' '); // pad to fixed size
     buf.append(ip_line);
@@ -132,7 +132,7 @@ int main() {
   std::string buffer(ip_size * N, ' ');
 
   pretty_print(volume, bytes, "memcpy baseline", counters::bench([&]() {
-                 std::memcpy((char *)buffer.data(), buf.data(), bytes);
+                 std::memcpy(buffer.data(), buf.data(), bytes);
                }));
 
   pretty_print(volume, bytes, "just_seek_ip_end (no parse)",
@@ -143,7 +143,7 @@ int main() {
                  int ok = 0;
                  for (size_t i = 0; i < N; ++i) {
                    const char *q = seek_ip_end(p, pend);
-                   sum += (uint32_t)(q - p);
+                   sum += static_cast<uint32_t>(q - p);
                    p += ip_size;
                  }
                  sink += sum;

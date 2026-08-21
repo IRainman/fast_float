@@ -125,7 +125,7 @@ template <typename T> bool test() {
 template <typename T> void strtod_from_string(std::string const &st, T &d);
 
 template <> void strtod_from_string(std::string const &st, double &d) {
-  char *pr = (char *)st.c_str();
+  char *pr = const_cast<char *>(st.c_str());
 #if defined(__CYGWIN__) || defined(__MINGW32__) || defined(__MINGW64__) ||     \
     defined(sun) || defined(__sun)
   d = cygwin_strtod_l(pr, &pr);
@@ -142,7 +142,7 @@ template <> void strtod_from_string(std::string const &st, double &d) {
 }
 
 template <> void strtod_from_string(std::string const &st, float &d) {
-  char *pr = (char *)st.c_str();
+  char *pr = const_cast<char *>(st.c_str());
 #if defined(__CYGWIN__) || defined(__MINGW32__) || defined(__MINGW64__) ||     \
     defined(sun) || defined(__sun)
   d = cygwin_strtof_l(st.c_str(), &pr);

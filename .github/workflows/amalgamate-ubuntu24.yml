@@ -14,4 +14,4 @@ jobs:
           python3 ./script/amalgamate.py > build/fast_float/fast_float.h &&
           cp tests/string_test.cpp build/ &&
           cd build &&
-          g++ string_test.cpp
+          g++ -Werror=old-style-cast string_test.cpp
