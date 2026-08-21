@@ -637,6 +637,19 @@ fastfloat_really_inline constexpr uint64_t emulu(uint32_t x,
 
 fastfloat_really_inline FASTFLOAT_CONSTEXPR14 uint64_t
 umul128(uint64_t ab, uint64_t cd, uint64_t &hi) noexcept {
+  if (is_constant_evaluated()) {
+    auto ab_shifted = static_cast<uint32_t>(ab >> 32);
+    auto cd_shifted = static_cast<uint32_t>(cd >> 32);
+
+    auto ad = emulu(ab_shifted, static_cast<uint32_t>(cd));
+    auto bd = emulu(static_cast<uint32_t>(ab), static_cast<uint32_t>(cd));
+    auto adbc = ad + emulu(static_cast<uint32_t>(ab), cd_shifted);
+    auto adbc_carry = static_cast<uint64_t>(adbc < ad) << 32;
+    auto lo = bd + (adbc << 32);
+    hi = emulu(ab_shifted, cd_shifted) + static_cast<uint32_t>(adbc >> 32) +
+         adbc_carry + static_cast<uint64_t>(lo < bd);
+    return lo;
+  }
 #if defined(_M_ARM64) && !defined(__MINGW32__)
   // ARM64 has native support for 64-bit multiplications, no need to emulate
   // But MinGW on ARM64 doesn't have native support for 64-bit multiplications
@@ -644,19 +657,7 @@ umul128(uint64_t ab, uint64_t cd, uint64_t &hi) noexcept {
   return ab * cd;
 #elif (defined(_WIN64) && !defined(__clang__) && !defined(_M_ARM64) &&         \
        !defined(__GNUC__))
-  return _umul128(ab, cd, &hi); // _umul128 not available on ARM64
-#else
-  auto ab_shifted = static_cast<uint32_t>(ab >> 32);
-  auto cd_shifted = static_cast<uint32_t>(cd >> 32);
-
-  auto ad = emulu(ab_shifted, static_cast<uint32_t>(cd));
-  auto bd = emulu(static_cast<uint32_t>(ab), static_cast<uint32_t>(cd));
-  auto adbc = ad + emulu(static_cast<uint32_t>(ab), cd_shifted);
-  auto adbc_carry = static_cast<uint64_t>(adbc < ad) << 32;
-  auto lo = bd + (adbc << 32);
-  hi = emulu(ab_shifted, cd_shifted) + static_cast<uint32_t>(adbc >> 32) +
-       adbc_carry + static_cast<uint64_t>(lo < bd);
-  return lo;
+return _umul128(ab, cd, &hi); // _umul128 not available on ARM64
 #endif
 }
 
