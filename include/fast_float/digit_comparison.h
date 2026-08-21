@@ -217,7 +217,9 @@ fastfloat_really_inline FASTFLOAT_CONSTEXPR20 bool
 is_truncated(span<UC const> s) noexcept {
   return is_truncated(s.ptr, s.ptr + s.len());
 }
-#ifdef FASTFLOAT_64BIT_LIMB &&FASTFLOAT_X86_SIMD >= 31
+
+#if defined(FASTFLOAT_64BIT_LIMB) && defined(FASTFLOAT_X86_SIMD) &&            \
+    FASTFLOAT_X86_SIMD >= 31
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 void
 parse_sixteen_digits(char const *&p, limb &value, am_digits &counter,
                      am_digits &count) noexcept {
@@ -295,7 +297,8 @@ parse_mantissa(bigint &result, const parsed_number_string_t<UC> &num) noexcept {
   skip_zeros(p, pend);
   // process all digits, in increments of step per loop
   while (p != pend) {
-#ifdef FASTFLOAT_64BIT_LIMB &&FASTFLOAT_X86_SIMD >= 31
+#if defined(FASTFLOAT_64BIT_LIMB) && defined(FASTFLOAT_X86_SIMD) &&            \
+    FASTFLOAT_X86_SIMD >= 31
     if FASTFLOAT_CONSTEXPR17 (sizeof(UC) == 1) {
       if (!is_constant_evaluated() && (std::distance(p, pend) >= 16) &&
           (step - counter >= 16) && (max_digits - digits >= 16)) {
