@@ -256,7 +256,8 @@ clinger_fast_path_impl(am_mant_t const mantissa, am_pow_t const exponent,
           return true;
         }
 #endif
-        value = static_cast<T>(mantissa) * binary_format<T>::exact_power_of_ten(exponent);
+        value = static_cast<T>(mantissa) *
+                binary_format<T>::exact_power_of_ten(exponent);
 #ifndef FASTFLOAT_ONLY_POSITIVE_C_NUMBER_WO_INF_NAN
         if (is_negative) {
           value = -value;
