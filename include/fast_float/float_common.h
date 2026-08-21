@@ -634,7 +634,7 @@ fastfloat_really_inline constexpr uint64_t emulu_generic(uint32_t x,
   return x * static_cast<uint64_t>(y);
 }
 
-fastfloat_really_inline FASTFLOAT_CONSTEXPR14 uint64_t
+fastfloat_really_inline FASTFLOAT_CONSTEXPR20 uint64_t
 umul128_generic(uint64_t ab, uint64_t cd, uint64_t &hi) noexcept {
   auto ab_shifted = static_cast<uint32_t>(ab >> 32);
   auto cd_shifted = static_cast<uint32_t>(cd >> 32);
@@ -653,7 +653,7 @@ umul128_generic(uint64_t ab, uint64_t cd, uint64_t &hi) noexcept {
 }
 
 // Compute hi and low parts of 128-bit.
-fastfloat_really_inline FASTFLOAT_CONSTEXPR14 uint64_t
+fastfloat_really_inline FASTFLOAT_CONSTEXPR20 uint64_t
 umul128(uint64_t ab, uint64_t cd, uint64_t &hi) noexcept {
   if (is_constant_evaluated()) {
     return umul128_generic(ab, cd, hi);
