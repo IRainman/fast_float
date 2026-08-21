@@ -629,64 +629,58 @@ countr_zero_32(uint32_t input_num) noexcept {
 #endif
 }
 
+#ifdef FASTFLOAT_32BIT
 // slow emulation routine for 32-bit
 fastfloat_really_inline constexpr uint64_t emulu(uint32_t x,
                                                  uint32_t y) noexcept {
-  return x * (uint64_t)y;
+  return x * static_cast<uint64_t>(y);
 }
+#endif
 
 fastfloat_really_inline FASTFLOAT_CONSTEXPR14 uint64_t
-umul128_generic(uint64_t ab, uint64_t cd, uint64_t *hi) noexcept {
-  uint64_t ad = emulu((uint32_t)(ab >> 32), (uint32_t)cd);
-  uint64_t bd = emulu((uint32_t)ab, (uint32_t)cd);
-  uint64_t adbc = ad + emulu((uint32_t)ab, (uint32_t)(cd >> 32));
-  uint64_t adbc_carry = (uint64_t)(adbc < ad);
-  uint64_t lo = bd + (adbc << 32);
-  *hi = emulu((uint32_t)(ab >> 32), (uint32_t)(cd >> 32)) + (adbc >> 32) +
-        (adbc_carry << 32) + (uint64_t)(lo < bd);
+umul128(uint64_t ab, uint64_t cd, uint64_t &hi) noexcept {
+#if defined(_M_ARM64) && !defined(__MINGW32__)
+  // ARM64 has native support for 64-bit multiplications, no need to emulate
+  // But MinGW on ARM64 doesn't have native support for 64-bit multiplications
+  hi = __umulh(ab, cd);
+  return ab * cd;
+#elif (defined(_WIN64) && !defined(__clang__) && !defined(_M_ARM64) &&         \
+       !defined(__GNUC__))
+  return _umul128(ab, cd, &hi); // _umul128 not available on ARM64
+#else
+  auto ab_shifted = static_cast<uint32_t>(ab >> 32);
+  auto cd_shifted = static_cast<uint32_t>(cd >> 32);
+
+  auto ad = emulu(ab_shifted, static_cast<uint32_t>(cd));
+  auto bd = emulu(static_cast<uint32_t>(ab), static_cast<uint32_t>(cd));
+  auto adbc = ad + emulu(static_cast<uint32_t>(ab), cd_shifted);
+  auto adbc_carry = static_cast<uint64_t>(adbc < ad) << 32;
+  auto lo = bd + (adbc << 32);
+  hi = emulu(ab_shifted, cd_shifted) + static_cast<uint32_t>(adbc >> 32) +
+       adbc_carry + static_cast<uint64_t>(lo < bd);
   return lo;
+#endif
 }
-
-#ifdef FASTFLOAT_32BIT
-
-// slow emulation routine for 32-bit
-#if !defined(__MINGW64__)
-fastfloat_really_inline FASTFLOAT_CONSTEXPR14 uint64_t
-_umul128(uint64_t ab, uint64_t cd, uint64_t *hi) noexcept {
-  return umul128_generic(ab, cd, hi);
-}
-#endif // !__MINGW64__
-
-#endif // FASTFLOAT_32BIT
 
 // compute 64-bit a*b
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 value128
 full_multiplication(uint64_t a, uint64_t b) noexcept {
   value128 answer;
   if (is_constant_evaluated()) {
-    answer.low = umul128_generic(a, b, &answer.high);
+    answer.low = umul128(a, b, answer.high);
   } else {
-#if defined(_M_ARM64) && !defined(__MINGW32__)
-    // ARM64 has native support for 64-bit multiplications, no need to emulate
-    // But MinGW on ARM64 doesn't have native support for 64-bit multiplications
-    answer.high = __umulh(a, b);
-    answer.low = a * b;
-#elif defined(FASTFLOAT_32BIT) || (defined(_WIN64) && !defined(__clang__) &&   \
-                                   !defined(_M_ARM64) && !defined(__GNUC__))
-    answer.low =
-        _umul128(a, b, &answer.high); // _umul128 not available on ARM64
-#elif defined(FASTFLOAT_64BIT) && defined(__SIZEOF_INT128__)
+#if defined(FASTFLOAT_64BIT) && defined(__SIZEOF_INT128__)
     __uint128_t r = (static_cast<__uint128_t>(a)) * b;
     answer.low = static_cast<uint64_t>(r);
     answer.high = static_cast<uint64_t>(r >> 64);
 #else
-    answer.low = umul128_generic(a, b, &answer.high);
+    answer.low = umul128(a, b, answer.high);
 #endif
   }
   return answer;
 }
 
-/* alignas(16) - better data cache usage witout align */
+/* alignas(16) - better data cache usage without align */
 struct adjusted_mantissa {
   am_mant_t mantissa;
   am_pow_t power2;
