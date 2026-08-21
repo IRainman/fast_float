@@ -70,7 +70,9 @@
 #endif
 
 // C++20 std::is_constant_evaluated
-#if defined(__cpp_lib_is_constant_evaluated) && __cpp_lib_is_constant_evaluated >= 201811L && defined(__cpp_consteval) && __cpp_consteval >= 201811L
+#if defined(__cpp_lib_is_constant_evaluated) &&                                \
+    __cpp_lib_is_constant_evaluated >= 201811L && defined(__cpp_consteval) &&  \
+    __cpp_consteval >= 201811L
 #define FASTFLOAT_HAS_IS_CONSTANT_EVALUATED 1
 #define FASTFLOAT_CONSTEVAL consteval
 #else
