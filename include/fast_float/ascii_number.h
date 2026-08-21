@@ -401,7 +401,7 @@ loop_parse_if_digits(UC const *&p, UC const *const pend, uint64_t &i) noexcept {
   }
   // Finalizer
   while ((p != pend) && is_integer(*p)) {
-    i = i * 10 + static_cast<uint64_t>(*p - UC('0')); // may overflow, that's ok
+    i = i * 10 + static_cast<uint8_t>(*p - UC('0')); // may overflow, that's ok
     ++p;
   }
 }
@@ -409,20 +409,18 @@ loop_parse_if_digits(UC const *&p, UC const *const pend, uint64_t &i) noexcept {
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 void
 loop_parse_if_digits(char const *&p, char const *const pend,
                      uint64_t &i) noexcept {
-#if FASTFLOAT_X86_SIMD >= 42 && FASTFLOAT_USE_SIMD
+#if FASTFLOAT_USE_SIMD && FASTFLOAT_X86_SIMD >= 42
   if (!is_constant_evaluated()) {
-    /*
-     * SSE4.2 handles 16 bytes at once.
-     *
-     * This is only used when a complete 16-byte block exists,
-     * so the load is always inside [p, pend).
-     */
-    while (std::distance(p, pend) >= 16 && parse_if_16_digits(p, i)) {
-      p += 16;
-    }
+    // SSE4.2 handles 16 bytes at once.
+    while (std::distance(p, pend) >= 16)
+      if (parse_if_16_digits(p, i)) {
+        p += 16;
+      } else {
+        break;
+      }
   }
 #endif
-  // optimizes better than parse_if_eight_digits_unrolled() for UC = char.
+  // Optimizes better than parse_if_eight_digits_unrolled() for char.
   while (std::distance(p, pend) >= 8 /*sizeof(uint64_t)*/) {
     auto const val = read_chars_to_unsigned<uint64_t>(p);
     if (is_made_of_8_digits(val)) {
@@ -446,7 +444,7 @@ loop_parse_if_digits(char const *&p, char const *const pend,
   }
   // Finalizer
   while ((p != pend) && is_integer(*p)) {
-    i = i * 10 + static_cast<uint64_t>(*p - '0'); // may overflow, that's ok
+    i = i * 10 + static_cast<uint8_t>(*p - '0'); // may overflow, that's ok
     ++p;
   }
 }
@@ -556,32 +554,27 @@ parse_number_string(UC const *p, UC const *pend,
   // parser already check that this is num and it's exist
   if ((p != pend) && is_integer(*p)) {
 #endif
-    answer.mantissa = static_cast<fast_float::am_mant_t>(*p - UC('0'));
+    answer.mantissa = static_cast<uint8_t>(*p - UC('0'));
     ++p;
     if ((p != pend) && is_integer(*p)) {
       answer.mantissa = static_cast<fast_float::am_mant_t>(
-          answer.mantissa * 10 +
-          static_cast<fast_float::am_mant_t>(*p - UC('0')));
+          answer.mantissa * 10 + static_cast<uint8_t>(*p - UC('0')));
       ++p;
       if ((p != pend) && is_integer(*p)) {
         answer.mantissa = static_cast<fast_float::am_mant_t>(
-            answer.mantissa * 10 +
-            static_cast<fast_float::am_mant_t>(*p - UC('0')));
+            answer.mantissa * 10 + static_cast<uint8_t>(*p - UC('0')));
         ++p;
         if ((p != pend) && is_integer(*p)) {
           answer.mantissa = static_cast<fast_float::am_mant_t>(
-              answer.mantissa * 10 +
-              static_cast<fast_float::am_mant_t>(*p - UC('0')));
+              answer.mantissa * 10 + static_cast<uint8_t>(*p - UC('0')));
           ++p;
           if ((p != pend) && is_integer(*p)) {
             answer.mantissa = static_cast<fast_float::am_mant_t>(
-                answer.mantissa * 10 +
-                static_cast<fast_float::am_mant_t>(*p - UC('0')));
+                answer.mantissa * 10 + static_cast<uint8_t>(*p - UC('0')));
             ++p;
             while ((p != pend) && is_integer(*p)) {
               answer.mantissa = static_cast<fast_float::am_mant_t>(
-                  answer.mantissa * 10 +
-                  static_cast<fast_float::am_mant_t>(*p - UC('0')));
+                  answer.mantissa * 10 + static_cast<uint8_t>(*p - UC('0')));
               ++p;
             }
           }
@@ -694,7 +687,7 @@ parse_number_string(UC const *p, UC const *pend,
       while ((p != pend) && is_integer(*p)) {
         if (exp_number < am_bias_limit) {
           // check for exponent overflow if we have too many digits.
-          auto const digit = uint8_t(*p - UC('0'));
+          auto const digit = static_cast<uint8_t>(*p - UC('0'));
           exp_number = 10 * exp_number + digit;
         }
         ++p;
@@ -906,7 +899,7 @@ parse_int_string(UC const *p, UC const *pend, T &value,
         if (is_made_of_4_digits(digits)) {
           auto v = parse_4_digits(digits);
           if (len >= 5 && is_integer(p[4])) {
-            v = v * 10 + static_cast<uint32_t>(p[4] - '0');
+            v = v * 10 + static_cast<uint8_t>(p[4] - '0');
             if (len >= 6 && is_integer(p[5])) {
               const UC *q = p + 5;
               while (q != pend && is_integer(*q)) {
