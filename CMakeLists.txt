@@ -17,7 +17,7 @@ else(FASTFLOAT_TEST)
 endif(FASTFLOAT_TEST)
 
 option(FASTFLOAT_SANITIZE "Sanitize addresses" OFF)
-if (NOT CMAKE_BUILD_TYPE)
+if(NOT CMAKE_BUILD_TYPE)
   if(FASTFLOAT_SANITIZE)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
   else()
@@ -67,16 +67,15 @@ if(FASTFLOAT_SANITIZE)
       -fsanitize=undefined
       -fno-sanitize-recover=all
   )
-  if (CMAKE_COMPILER_IS_GNUCC)
+  if(CMAKE_COMPILER_IS_GNUCC)
     target_link_libraries(fast_float INTERFACE -fuse-ld=gold)
   endif()
 endif()
 
-target_compile_options(
-  fast_float
-  INTERFACE
-  $<$<AND:$<CXX_COMPILER_ID:MSVC>,$<VERSION_GREATER_EQUAL:$<CXX_COMPILER_VERSION>,19.10>>:/permissive->
-)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC"
+   AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.10)
+  target_compile_options(fast_float INTERFACE /permissive-)
+endif()
 
 if(FASTFLOAT_INSTALL)
   include(CMakePackageConfigHelpers)
@@ -85,7 +84,7 @@ if(FASTFLOAT_INSTALL)
   set(FASTFLOAT_PROJECT_CONFIG "${CMAKE_CURRENT_BINARY_DIR}/module/FastFloatConfig.cmake")
   set(FASTFLOAT_CONFIG_INSTALL_DIR "${CMAKE_INSTALL_DATAROOTDIR}/cmake/FastFloat")
 
-  if(${CMAKE_VERSION} VERSION_LESS "3.14")
+  if(CMAKE_VERSION VERSION_LESS "3.14")
     write_basic_package_version_file(
       "${FASTFLOAT_VERSION_CONFIG}"
       VERSION ${PROJECT_VERSION}

@@ -8,15 +8,11 @@
 #endif
 
 // C++14 constexpr
-#if defined(_MSC_VER)
-#if defined(_MSVC_LANG) && _MSVC_LANG >= 201402L
-#define FASTFLOAT_CONSTEXPR14 constexpr
-#else
-#define FASTFLOAT_CONSTEXPR14
-#endif
-#elif defined(__cpp_constexpr) && __cpp_constexpr >= 201304L
+#if defined(__cpp_constexpr) && __cpp_constexpr >= 201304L
 #define FASTFLOAT_CONSTEXPR14 constexpr
 #elif defined(__cplusplus) && __cplusplus >= 201402L
+#define FASTFLOAT_CONSTEXPR14 constexpr
+#elif defined(_MSC_VER) && defined(_MSVC_LANG) && _MSVC_LANG >= 201402L
 #define FASTFLOAT_CONSTEXPR14 constexpr
 #else
 #define FASTFLOAT_CONSTEXPR14
@@ -58,6 +54,7 @@
 #define FASTFLOAT_INLINE_VARIABLE static constexpr
 #endif
 
+// Before C++17, constexpr variables may need an out-of-class definition.
 #if (defined(__cplusplus) && __cplusplus >= 201703L) ||                        \
     (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L)
 #define FASTFLOAT_DETAIL_MUST_DEFINE_CONSTEXPR_VARIABLE 0
@@ -72,33 +69,27 @@
 #define FASTFLOAT_HAS_BIT_CAST 0
 #endif
 
+// C++20 std::is_constant_evaluated
 #if defined(__cpp_lib_is_constant_evaluated) &&                                \
     __cpp_lib_is_constant_evaluated >= 201811L
 #define FASTFLOAT_HAS_IS_CONSTANT_EVALUATED 1
-#else
-#define FASTFLOAT_HAS_IS_CONSTANT_EVALUATED 0
-#endif
-
-// C++20 consteval
-#if defined(__cpp_consteval) && __cpp_consteval >= 201811L
 #define FASTFLOAT_CONSTEVAL consteval
 #else
+#define FASTFLOAT_HAS_IS_CONSTANT_EVALUATED 0
 #define FASTFLOAT_CONSTEVAL FASTFLOAT_CONSTEXPR14
 #endif
 
-// C++20 constexpr function support
-#if defined(_MSC_VER)
-#if defined(_MSVC_LANG) && _MSVC_LANG >= 202002L
+// C++20 constexpr library support, including std::is_constant_evaluated(),
+// std::bit_cast(), and constexpr algorithms. Therefore all required library
+// feature macros must be present.
+#if FASTFLOAT_HAS_IS_CONSTANT_EVALUATED && FASTFLOAT_HAS_BIT_CAST &&           \
+    defined(__cpp_lib_constexpr_algorithms) &&                                 \
+    __cpp_lib_constexpr_algorithms >= 201806L
 #define FASTFLOAT_CONSTEXPR20 constexpr
+#define FASTFLOAT_IS_CONSTEXPR 1
 #else
 #define FASTFLOAT_CONSTEXPR20
-#endif
-#elif defined(__cpp_constexpr) && __cpp_constexpr >= 201907L
-#define FASTFLOAT_CONSTEXPR20 constexpr
-#elif defined(__cplusplus) && __cplusplus >= 202002L
-#define FASTFLOAT_CONSTEXPR20 constexpr
-#else
-#define FASTFLOAT_CONSTEXPR20
+#define FASTFLOAT_IS_CONSTEXPR 0
 #endif
 
 // C++20 std::byteswap
