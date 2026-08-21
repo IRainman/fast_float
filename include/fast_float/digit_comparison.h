@@ -217,6 +217,16 @@ fastfloat_really_inline FASTFLOAT_CONSTEXPR20 bool
 is_truncated(span<UC const> s) noexcept {
   return is_truncated(s.ptr, s.ptr + s.len());
 }
+#ifdef FASTFLOAT_64BIT_LIMB && FASTFLOAT_X86_SIMD >= 31
+fastfloat_really_inline FASTFLOAT_CONSTEXPR20 void
+parse_sixteen_digits(char const *&p, limb &value, am_digits &counter,
+                     am_digits &count) noexcept {
+  value = parse_16_digits(p);
+  p += 16;
+  counter += 16;
+  count += 16;
+}
+#endif
 
 template <typename UC>
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20 void
@@ -226,6 +236,16 @@ parse_eight_digits(UC const *&p, limb &value, am_digits &counter,
   p += 8;
   counter += 8;
   count += 8;
+}
+
+template <typename UC>
+fastfloat_really_inline FASTFLOAT_CONSTEXPR20 void
+parse_four_digits(UC const *&p, limb &value, am_digits &counter,
+                  am_digits &count) noexcept {
+  value = value * 10000 + parse_4_digits(read_chars_to_unsigned<uint32_t>(p));
+  p += 4;
+  counter += 4;
+  count += 4;
 }
 
 template <typename UC>
@@ -275,16 +295,29 @@ parse_mantissa(bigint &result, const parsed_number_string_t<UC> &num) noexcept {
   skip_zeros(p, pend);
   // process all digits, in increments of step per loop
   while (p != pend) {
+#ifdef FASTFLOAT_64BIT_LIMB &&FASTFLOAT_X86_SIMD >= 31
+    if FASTFLOAT_CONSTEXPR17 (sizeof(UC) == 1) {
+      if (!is_constant_evaluated() && (std::distance(p, pend) >= 16) &&
+          (step - counter >= 16) && (max_digits - digits >= 16)) {
+        parse_sixteen_digits(p, value, counter, digits);
+      }
+    }
+#endif
     while ((std::distance(p, pend) >= 8) && (step - counter >= 8) &&
            (max_digits - digits >= 8)) {
       parse_eight_digits(p, value, counter, digits);
+    }
+    while ((std::distance(p, pend) >= 4) && (step - counter >= 4) &&
+           (max_digits - digits >= 4)) {
+      parse_four_digits(p, value, counter, digits);
     }
     while (counter < step && p != pend && digits < max_digits) {
       parse_one_digit(p, value, counter, digits);
     }
     if (digits == max_digits) {
       // add the temporary value, then check if we've truncated any digits
-      add_native(result, limb(powers_of_ten_uint64[counter]), value);
+      add_native(result, static_cast<limb>(powers_of_ten_uint64[counter]),
+                 value);
       bool truncated = is_truncated(p, pend);
       if (num.fraction.ptr != nullptr) {
         truncated |= is_truncated(num.fraction);
@@ -294,7 +327,8 @@ parse_mantissa(bigint &result, const parsed_number_string_t<UC> &num) noexcept {
       }
       return digits;
     } else {
-      add_native(result, limb(powers_of_ten_uint64[counter]), value);
+      add_native(result, static_cast<limb>(powers_of_ten_uint64[counter]),
+                 value);
       counter = 0;
       value = 0;
     }
@@ -318,14 +352,16 @@ parse_mantissa(bigint &result, const parsed_number_string_t<UC> &num) noexcept {
       }
       if (digits == max_digits) {
         // add the temporary value, then check if we've truncated any digits
-        add_native(result, limb(powers_of_ten_uint64[counter]), value);
+        add_native(result, static_cast<limb>(powers_of_ten_uint64[counter]),
+                   value);
         bool truncated = is_truncated(p, pend);
         if (truncated) {
           round_up_bigint(result, digits);
         }
         return digits;
       } else {
-        add_native(result, limb(powers_of_ten_uint64[counter]), value);
+        add_native(result, static_cast<limb>(powers_of_ten_uint64[counter]),
+                   value);
         counter = 0;
         value = 0;
       }
@@ -333,7 +369,7 @@ parse_mantissa(bigint &result, const parsed_number_string_t<UC> &num) noexcept {
   }
 
   if (counter != 0) {
-    add_native(result, limb(powers_of_ten_uint64[counter]), value);
+    add_native(result, static_cast<limb>(powers_of_ten_uint64[counter]), value);
   }
   return digits;
 }

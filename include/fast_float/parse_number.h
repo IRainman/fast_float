@@ -226,7 +226,7 @@ clinger_fast_path_impl(am_mant_t const mantissa, am_pow_t const exponent,
       // We have that fegetround() == FE_TONEAREST.
       // Next is Clinger's fast path.
       if (mantissa <= binary_format<T>::max_mantissa_fast_path()) {
-        value = T(mantissa);
+        value = static_cast<T>(mantissa);
         if (exponent < 0) {
           value = value / binary_format<T>::exact_power_of_ten(-exponent);
         } else {
@@ -250,13 +250,13 @@ clinger_fast_path_impl(am_mant_t const mantissa, am_pow_t const exponent,
         if (mantissa == 0) {
           value =
 #ifndef FASTFLOAT_ONLY_POSITIVE_C_NUMBER_WO_INF_NAN
-              is_negative ? T(-0.) :
+              is_negative ? static_cast<T>(-0.) :
 #endif
-                          T(0.);
+                          static_cast<T>(0.);
           return true;
         }
 #endif
-        value = T(mantissa) * binary_format<T>::exact_power_of_ten(exponent);
+        value = static_cast<T>(mantissa) * binary_format<T>::exact_power_of_ten(exponent);
 #ifndef FASTFLOAT_ONLY_POSITIVE_C_NUMBER_WO_INF_NAN
         if (is_negative) {
           value = -value;
@@ -470,7 +470,7 @@ from_chars(UC const *first, UC const *last, T &value, int const base) noexcept {
   static_assert(is_supported_char_type<UC>::value,
                 "only char, wchar_t, char16_t and char32_t are supported");
 
-  parse_options_t<UC> const options(chars_format::general, UC('.'),
+  parse_options_t<UC> const options(chars_format::general, static_cast<UC>('.'),
                                     static_cast<base_t>(base));
   return from_chars_advanced(first, last, value, options);
 }
