@@ -212,13 +212,11 @@ fastfloat_really_inline FASTFLOAT_CONSTEXPR20 limb
 scalar_add(limb x, limb y, bool &overflow) noexcept {
   limb z;
 // gcc and clang
-#if defined(__has_builtin)
-#if __has_builtin(__builtin_add_overflow)
+#if FASTFLOAT_HAS_BUILTIN(__builtin_add_overflow)
   if (!is_constant_evaluated()) {
     overflow = __builtin_add_overflow(x, y, &z);
     return z;
   }
-#endif
 #endif
 
   // generic, this still optimizes correctly on MSVC.

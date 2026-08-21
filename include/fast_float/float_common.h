@@ -294,7 +294,7 @@ namespace fast_float {
 using std::bit_cast;
 #else
 template <typename To, typename From>
-fastfloat_really_inline FASTFLOAT_CONSTEXPR20 To bit_cast(const From &from) {
+fastfloat_really_inline FASTFLOAT_CONSTEXPR14 To bit_cast(const From &from) {
   // Implementation of std::bit_cast for pre-C++20.
   auto to = To();
   // The cast suppresses a bogus -Wclass-memaccess on GCC.
@@ -355,7 +355,7 @@ struct is_supported_char_type
 #ifndef FASTFLOAT_ONLY_POSITIVE_C_NUMBER_WO_INF_NAN
 
 template <typename UC>
-inline FASTFLOAT_CONSTEXPR14 bool
+inline FASTFLOAT_CONSTEXPR20 bool
 fastfloat_strncasecmp3(UC const *actual_mixedcase,
                        UC const *expected_lowercase) {
   if (is_constant_evaluated()) {
@@ -396,7 +396,7 @@ fastfloat_strncasecmp3(UC const *actual_mixedcase,
 }
 
 template <typename UC>
-inline FASTFLOAT_CONSTEXPR14 bool
+inline FASTFLOAT_CONSTEXPR20 bool
 fastfloat_strncasecmp5(UC const *actual_mixedcase,
                        UC const *expected_lowercase) noexcept {
   if (is_constant_evaluated()) {
@@ -447,7 +447,7 @@ fastfloat_strncasecmp5(UC const *actual_mixedcase,
 
 // Compares two ASCII strings in a case insensitive manner.
 template <typename UC>
-inline FASTFLOAT_CONSTEXPR14 bool
+inline FASTFLOAT_CONSTEXPR20 bool
 fastfloat_strncasecmp(UC const *actual_mixedcase, UC const *expected_lowercase,
                       uint_fast8_t const length) noexcept {
   if (is_constant_evaluated()) {

@@ -241,7 +241,7 @@ parse_eight_digits(UC const *&p, limb &value, am_digits &counter,
 }
 
 template <typename UC>
-fastfloat_really_inline FASTFLOAT_CONSTEXPR20 void
+fastfloat_really_inline FASTFLOAT_CONSTEXPR14 void
 parse_four_digits(UC const *&p, limb &value, am_digits &counter,
                   am_digits &count) noexcept {
   value = value * 10000 + parse_4_digits(read_chars_to_unsigned<uint32_t>(p));

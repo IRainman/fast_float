@@ -19,7 +19,7 @@
 namespace fast_float {
 
 template <typename UC>
-fastfloat_really_inline constexpr bool has_simd_opt() noexcept {
+fastfloat_really_inline FASTFLOAT_CONSTEVAL bool has_simd_opt() noexcept {
 #ifdef FASTFLOAT_USE_SIMD
   return std::is_same<UC, char16_t>::value;
 #else
