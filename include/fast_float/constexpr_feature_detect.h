@@ -102,9 +102,7 @@
 //  user provided solution
 // #elif defined(__cpp_attrubute_assume)
 //  For support attribute [[assume]] is declared in P1774
-#define FASTFLOAT_ASSUME(expr)                                                 \
-  assert(expr);                                                                \
-  [[assume(expr)]]
+#define FASTFLOAT_ASSUME(expr) [[assume(expr)]]
 // #else
 // #define FASTFLOAT_ASSUME(expr)
 // #endif
