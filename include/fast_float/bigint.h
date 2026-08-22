@@ -618,11 +618,20 @@ struct bigint : pow5_tables<> {
       exp -= small_step;
     }
     if (exp != 0) {
-      // Work around clang bug https://godbolt.org/z/zedh7rrhc
-      // This is similar to https://github.com/llvm/llvm-project/issues/47746,
-      // except the workaround described there don't work here
-      FASTFLOAT_TRY(small_mul(vec, limb((static_cast<void>(small_power_of_5[0]),
-                                         small_power_of_5[exp]))));
+      FASTFLOAT_TRY(small_mul(
+          vec,
+          limb(
+#if defined(__clang__)
+              // Work around clang bug https://godbolt.org/z/zedh7rrhc
+              // This is similar to
+              // https://github.com/llvm/llvm-project/issues/47746, except
+              // the workaround described there don't work here
+              (static_cast<void>(small_power_of_5[0]), small_power_of_5[exp])
+#else
+              small_power_of_5[exp]
+#endif
+
+                  )));
     }
 
     return true;
