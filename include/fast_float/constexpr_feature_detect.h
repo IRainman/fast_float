@@ -98,13 +98,11 @@
 #define FASTFLOAT_HAS_BUILTIN(x) false
 #endif
 
-// #if defined(FASTFLOAT_ASSUME)
-//  user provided solution
-// #elif defined(__cpp_attrubute_assume)
+#if defined(__cpp_attrubute_assume)
 //  For support attribute [[assume]] is declared in P1774
 #define FASTFLOAT_ASSUME(expr) [[assume(expr)]]
-// #else
-// #define FASTFLOAT_ASSUME(expr)
-// #endif
+#else
+#define FASTFLOAT_ASSUME(expr)
+#endif
 
 #endif // FASTFLOAT_CONSTEXPR_FEATURE_DETECT_H
