@@ -946,9 +946,9 @@ inline constexpr std::float16_t
 binary_format<std::float16_t>::exact_power_of_ten(am_pow_t power) {
 #if defined(__clang__)
   // Work around clang bug https://godbolt.org/z/zedh7rrhc
-  return (void)max_mantissa[0], max_mantissa[power];
+  return (void)powers_of_ten[0], powers_of_ten[power];
 #else
-  return max_mantissa[power];
+  return powers_of_ten[power];
 #endif
 }
 
@@ -1086,9 +1086,9 @@ inline constexpr std::bfloat16_t
 binary_format<std::bfloat16_t>::exact_power_of_ten(am_pow_t power) {
 #if defined(__clang__)
   // Work around clang bug https://godbolt.org/z/zedh7rrhc
-  return (void)max_mantissa[0], max_mantissa[power];
+  return (void)powers_of_ten[0], powers_of_ten[power];
 #else
-  return max_mantissa[power];
+  return powers_of_ten[power];
 #endif
 }
 
