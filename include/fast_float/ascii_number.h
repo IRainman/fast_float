@@ -484,7 +484,7 @@ template <typename UC> struct parsed_number_string_t {
   FASTFLOAT_NO_UNIQUE_ADDRESS parse_error error;
 
   // contains the range of the significant digits
-  FASTFLOAT_NO_UNIQUE_ADDRESS span<UC const> integer; // non-nullable
+  FASTFLOAT_NO_UNIQUE_ADDRESS span<UC const> integer;  // non-nullable
   FASTFLOAT_NO_UNIQUE_ADDRESS span<UC const> fraction; // nullable
 };
 
