@@ -687,8 +687,8 @@ full_multiplication(uint64_t a, uint64_t b) noexcept {
 
 /* alignas(16) - better data cache usage without align */
 struct adjusted_mantissa {
-  am_mant_t mantissa;
-  am_pow_t power2;
+  FASTFLOAT_NO_UNIQUE_ADDRESS am_mant_t mantissa;
+  FASTFLOAT_NO_UNIQUE_ADDRESS am_pow_t power2;
 
   constexpr adjusted_mantissa() noexcept : mantissa(0), power2(0) {}
 

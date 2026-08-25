@@ -1,16 +1,42 @@
 #ifndef FASTFLOAT_CONSTEXPR_FEATURE_DETECT_H
 #define FASTFLOAT_CONSTEXPR_FEATURE_DETECT_H
 
-#ifdef __has_include
-#if __has_include(<version>)
-#include <version>
+#ifdef _MSVC_LANG
+#define FASTFLOAT_CPLUSPLUS _MSVC_LANG
+#else
+#define FASTFLOAT_CPLUSPLUS __cplusplus
 #endif
+
+// Detect __has_*.
+#ifdef __has_feature
+#define FASTFLOAT_HAS_FEATURE(x) __has_feature(x)
+#else
+#define FASTFLOAT_HAS_FEATURE(x) 0
+#endif
+#ifdef __has_include
+#define FASTFLOAT_HAS_INCLUDE(x) __has_include(x)
+#else
+#define FASTFLOAT_HAS_INCLUDE(x) 0
+#endif
+#ifdef __has_builtin
+#define FASTFLOAT_HAS_BUILTIN(x) __has_builtin(x)
+#else
+#define FASTFLOAT_HAS_BUILTIN(x) 0
+#endif
+#ifdef __has_cpp_attribute
+#define FASTFLOAT_HAS_CPP_ATTRIBUTE(x) __has_cpp_attribute(x)
+#else
+#define FASTFLOAT_HAS_CPP_ATTRIBUTE(x) 0
+#endif
+
+#if FASTFLOAT_HAS_INCLUDE(<version>)
+#include <version>
 #endif
 
 // C++14 constexpr
 #if defined(__cpp_constexpr) && __cpp_constexpr >= 201304L
 #define FASTFLOAT_CONSTEXPR14 constexpr
-#elif __cplusplus >= 201402L
+#elif FASTFLOAT_CPLUSPLUS >= 201402L
 #define FASTFLOAT_CONSTEXPR14 constexpr
 #elif defined(_MSC_VER) && _MSC_VER >= 1910 && _MSVC_LANG >= 201402L
 #define FASTFLOAT_CONSTEXPR14 constexpr
@@ -21,10 +47,7 @@
 // C++14 variable templates
 #if defined(__cpp_variable_templates) && __cpp_variable_templates >= 201304L
 #define FASTFLOAT_HAS_VARIABLE_TEMPLATES 1
-#elif __cplusplus >= 201402L
-#define FASTFLOAT_HAS_VARIABLE_TEMPLATES 1
-#elif defined(_MSC_FULL_VER) && _MSC_FULL_VER >= 190023918L &&                 \
-    defined(_MSC_VER) && _MSVC_LANG >= 201402L
+#elif FASTFLOAT_CPLUSPLUS >= 201402L
 #define FASTFLOAT_HAS_VARIABLE_TEMPLATES 1
 #else
 #define FASTFLOAT_HAS_VARIABLE_TEMPLATES 0
@@ -35,9 +58,7 @@
 #define FASTFLOAT_CONSTEXPR17 constexpr
 #elif defined(__cpp_constexpr) && __cpp_constexpr >= 201603L
 #define FASTFLOAT_CONSTEXPR17 constexpr
-#elif __cplusplus >= 201703L
-#define FASTFLOAT_CONSTEXPR17 constexpr
-#elif defined(_MSC_VER) && _MSC_VER >= 1911 && _MSVC_LANG >= 201703L
+#elif FASTFLOAT_CPLUSPLUS >= 201703L
 #define FASTFLOAT_CONSTEXPR17 constexpr
 #else
 #define FASTFLOAT_CONSTEXPR17
@@ -55,7 +76,7 @@
 #endif
 
 // Before C++17 constexpr variables may need an out-of-class definition.
-#if __cplusplus >= 201703L || (defined(_MSC_VER) && _MSVC_LANG >= 201703L)
+#if FASTFLOAT_CPLUSPLUS >= 201703L
 #define FASTFLOAT_DETAIL_MUST_DEFINE_CONSTEXPR_VARIABLE 0
 #else
 #define FASTFLOAT_DETAIL_MUST_DEFINE_CONSTEXPR_VARIABLE 1
@@ -92,17 +113,23 @@
 #define FASTFLOAT_HAS_BYTESWAP 0
 #endif
 
-#if defined(__has_builtin)
-#define FASTFLOAT_HAS_BUILTIN(x) __has_builtin(x)
-#else
-#define FASTFLOAT_HAS_BUILTIN(x) false
-#endif
-
-#if defined(__cpp_attrubute_assume)
-//  For support attribute [[assume]] is declared in P1774
+#ifdef FASTFLOAT_ASSUME
+// Use the provided definition.
+#elif FASTFLOAT_HAS_CPP_ATTRIBUTE(assume)
 #define FASTFLOAT_ASSUME(expr) [[assume(expr)]]
 #else
 #define FASTFLOAT_ASSUME(expr)
+#endif
+
+#ifdef FASTFLOAT_NO_UNIQUE_ADDRESS
+// Use the provided definition.
+#elif FASTFLOAT_CPLUSPLUS < 202002L
+// Not supported.
+#elif FASTFLOAT_HAS_CPP_ATTRIBUTE(no_unique_address)
+#define FASTFLOAT_NO_UNIQUE_ADDRESS [[no_unique_address]]
+// VS2019 v16.10 and later except clang-cl (https://reviews.llvm.org/D110485).
+#elif defined(_MSC_VER) && _MSC_VER >= 1929 && !defined(__clang__)
+#define FASTFLOAT_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
 #endif
 
 #endif // FASTFLOAT_CONSTEXPR_FEATURE_DETECT_H

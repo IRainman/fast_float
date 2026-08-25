@@ -473,19 +473,19 @@ enum class parse_error : uint_fast8_t {
 };
 
 template <typename UC> struct parsed_number_string_t {
-  am_mant_t mantissa;
-  am_pow_t exponent;
-  UC const *lastmatch;
+  FASTFLOAT_NO_UNIQUE_ADDRESS am_mant_t mantissa;
+  FASTFLOAT_NO_UNIQUE_ADDRESS am_pow_t exponent;
+  FASTFLOAT_NO_UNIQUE_ADDRESS UC const *lastmatch;
 #ifndef FASTFLOAT_ONLY_POSITIVE_C_NUMBER_WO_INF_NAN
-  bool negative;
+  FASTFLOAT_NO_UNIQUE_ADDRESS bool negative;
 #endif
-  bool invalid;
-  bool too_many_digits;
-  parse_error error;
+  FASTFLOAT_NO_UNIQUE_ADDRESS bool invalid;
+  FASTFLOAT_NO_UNIQUE_ADDRESS bool too_many_digits;
+  FASTFLOAT_NO_UNIQUE_ADDRESS parse_error error;
 
   // contains the range of the significant digits
-  span<UC const> integer;  // non-nullable
-  span<UC const> fraction; // nullable
+  FASTFLOAT_NO_UNIQUE_ADDRESS span<UC const> integer; // non-nullable
+  FASTFLOAT_NO_UNIQUE_ADDRESS span<UC const> fraction; // nullable
 };
 
 using byte_span = span<char const>;
@@ -774,9 +774,8 @@ parse_int_string(UC const *p, UC const *pend, T &value,
   FASTFLOAT_ASSUME(p < pend); // so dereference without checks
   from_chars_result_t<UC> answer;
 
-  auto const *const first = p;
-
 #ifndef FASTFLOAT_ONLY_POSITIVE_C_NUMBER_WO_INF_NAN
+  auto const *const first = p;
   // Read sign
   auto const negative = (*p == UC('-'));
 #ifdef FASTFLOAT_VISUAL_STUDIO
