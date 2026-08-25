@@ -130,6 +130,8 @@
 // VS2019 v16.10 and later except clang-cl (https://reviews.llvm.org/D110485).
 #elif defined(_MSC_VER) && _MSC_VER >= 1929 && !defined(__clang__)
 #define FASTFLOAT_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
+#else
+#define FASTFLOAT_NO_UNIQUE_ADDRESS
 #endif
 
 #endif // FASTFLOAT_CONSTEXPR_FEATURE_DETECT_H
