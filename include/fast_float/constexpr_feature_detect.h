@@ -123,8 +123,6 @@
 
 #ifdef FASTFLOAT_NO_UNIQUE_ADDRESS
 // Use the provided definition.
-#elif FASTFLOAT_CPLUSPLUS < 202002L
-// Not supported.
 #elif FASTFLOAT_HAS_CPP_ATTRIBUTE(no_unique_address)
 #define FASTFLOAT_NO_UNIQUE_ADDRESS [[no_unique_address]]
 // VS2019 v16.10 and later except clang-cl (https://reviews.llvm.org/D110485).
