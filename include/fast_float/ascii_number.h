@@ -957,7 +957,7 @@ parse_int_string(UC const *p, UC const *pend, T &value,
       answer.ptr = p;
       return answer;
     }
-#ifndef FASTFLOAT_ONLY_POSITIVE_C_NUMBER_WO_INF_NAN
+#ifndef FASTFLOAT_ISNOT_CHECKED_BOUNDS
     answer.ec = std::errc::invalid_argument;
     answer.ptr = first;
 
