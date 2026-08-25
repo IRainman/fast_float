@@ -117,7 +117,7 @@
 // Use the provided definition.
 // #elif FASTFLOAT_HAS_CPP_ATTRIBUTE(assume)
 // #define FASTFLOAT_ASSUME(expr) [[assume(expr)]]
-// #else
+#else
 #define FASTFLOAT_ASSUME(expr)
 #endif
 
