@@ -322,8 +322,9 @@ parse_mantissa(bigint &result, const parsed_number_string_t<UC> &num) noexcept {
       add_native(result, static_cast<limb>(powers_of_ten_uint64[counter]),
                  value);
       bool truncated = is_truncated(p, pend);
-      if (num.fraction.ptr != nullptr) {
-        truncated |= is_truncated(num.fraction);
+      // A nonzero integer suffix already determines the rounding direction.
+      if (!truncated && num.fraction.ptr != nullptr) {
+        truncated = is_truncated(num.fraction);
       }
       if (truncated) {
         round_up_bigint(result, digits);
