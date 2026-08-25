@@ -39,9 +39,9 @@ constexpr limb_t bigint_limbs = bigint_bits / limb_bits;
 // vector-like type that is allocated on the stack. the entire
 // buffer is pre-allocated, and only the length changes.
 template <limb_t size> struct stackvec {
-  limb data[size];
+  FASTFLOAT_NO_UNIQUE_ADDRESS limb data[size];
   // we never need more than 150 limbs
-  limb_t length{0};
+  FASTFLOAT_NO_UNIQUE_ADDRESS limb_t length{0};
 
   FASTFLOAT_CONSTEXPR20 stackvec() noexcept = default;
   stackvec(stackvec const &) = delete;
