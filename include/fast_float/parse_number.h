@@ -331,7 +331,7 @@ from_chars_advanced(parsed_number_string_t<UC> const &pns, T &value) noexcept {
 // and the am.power2<0 digit_comp recompute, so both slow branches collapse to
 // one helper call.
 template <typename T, typename UC>
-FASTFLOAT_CONSTEXPR20 from_chars_result_t<UC>
+static fastfloat_noinline FASTFLOAT_CONSTEXPR20 from_chars_result_t<UC>
 parse_number_slow_path(UC const *first, UC const *last, T &value,
                        parse_options_t<UC> const options
 #ifndef FASTFLOAT_ONLY_POSITIVE_C_NUMBER_WO_INF_NAN
