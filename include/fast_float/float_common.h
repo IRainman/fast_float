@@ -230,7 +230,6 @@ static_assert(FASTFLOAT_X86_SIMD == 20 || FASTFLOAT_X86_SIMD == 42 ||
 #endif
 #endif
 
-
 #ifdef FASTFLOAT_VISUAL_STUDIO
 #define fastfloat_really_inline __forceinline
 #define fastfloat_noinline __declspec(noinline)
