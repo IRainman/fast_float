@@ -473,15 +473,16 @@ enum class parse_error : uint_fast8_t {
 };
 
 template <typename UC> struct parsed_number_string_t {
+  FASTFLOAT_NO_UNIQUE_ADDRESS UC const *lastmatch;
   FASTFLOAT_NO_UNIQUE_ADDRESS am_mant_t mantissa;
   FASTFLOAT_NO_UNIQUE_ADDRESS am_pow_t exponent;
-  FASTFLOAT_NO_UNIQUE_ADDRESS UC const *lastmatch;
+
+  FASTFLOAT_NO_UNIQUE_ADDRESS parse_error error;
 #ifndef FASTFLOAT_ONLY_POSITIVE_C_NUMBER_WO_INF_NAN
   FASTFLOAT_NO_UNIQUE_ADDRESS bool negative;
 #endif
   FASTFLOAT_NO_UNIQUE_ADDRESS bool invalid;
   FASTFLOAT_NO_UNIQUE_ADDRESS bool too_many_digits;
-  FASTFLOAT_NO_UNIQUE_ADDRESS parse_error error;
 
   // contains the range of the significant digits
   FASTFLOAT_NO_UNIQUE_ADDRESS span<UC const> integer;  // non-nullable

@@ -89,8 +89,8 @@ enum class chars_format : chars_format_t {
 };
 
 template <typename UC> struct from_chars_result_t {
-  UC const *ptr;
-  std::errc ec;
+  FASTFLOAT_NO_UNIQUE_ADDRESS UC const *ptr;
+  FASTFLOAT_NO_UNIQUE_ADDRESS std::errc ec;
 
   // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p2497r0.html
   constexpr explicit operator bool() const noexcept {
@@ -495,8 +495,8 @@ fastfloat_strncasecmp(UC const *actual_mixedcase, UC const *expected_lowercase,
 
 // a pointer and a length to a contiguous block of memory
 template <typename T> struct span {
-  T const *ptr;
-  am_digits length;
+  FASTFLOAT_NO_UNIQUE_ADDRESS T const *ptr;
+  FASTFLOAT_NO_UNIQUE_ADDRESS am_digits length;
 
   constexpr span(T const *_ptr, am_digits _length) noexcept
       : ptr(_ptr), length(_length) {}
